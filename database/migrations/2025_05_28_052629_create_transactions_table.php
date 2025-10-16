@@ -23,6 +23,7 @@ return new class extends Migration
             $table->integer('total');
             $table->integer('cash_received');
             $table->integer('change');
+            $table->foreignId('member_id')->nullable()->constrained()->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
         });

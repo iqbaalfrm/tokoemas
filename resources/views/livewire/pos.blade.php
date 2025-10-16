@@ -144,6 +144,7 @@
            x-model="price"
            x-on:input.debounce.500ms="price = $event.target.value.replace(/\./g, '')"
            x-bind:value="formatCurrency(price)"
+            x-init="$el.value = formatCurrency(price)"
            class="w-full bg-transparent border-0 border-b-2 border-gray-300 dark:border-gray-600 pl-6 p-1 text-sm font-semibold text-gray-600 dark:text-white focus:ring-0 focus:border-green-500 transition">
 </div>
                                             </div>
@@ -199,144 +200,170 @@
     </div>
 
     @if ($showCheckoutModal)
-        <div wire:ignore.self x-data="{
-            init() {
-                @this.calculateTotal();
-                if (@this.payment_method_id) {
-                    @this.updatedPaymentMethodId(@this.payment_method_id);
-                }
-            }
-        }"
-            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-            <div
-                class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl transform scale-95 animate-modal-appear">
-                <div class="p-6">
-                    <form wire:submit="checkout">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="col-span-1">
-                                <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 mb-6 text-white">
-                                    <div class="text-sm opacity-90">Total Belanja</div>
-                                    <div class="text-3xl font-bold">
-                                        Rp {{ number_format($total_price, 0, ',', '.') }}
-                                    </div>
-                                </div>
+<div wire:ignore.self x-data="{
+    init() {
+        @this.calculateTotal();
+        if (@this.payment_method_id) {
+            @this.updatedPaymentMethodId(@this.payment_method_id);
+        }
+    }
+}" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl transform scale-95 animate-modal-appear">
+        <div class="p-6">
+            <form wire:submit="checkout">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {{-- ================= KIRI ================= --}}
+                    <div class="col-span-1">
+                        {{-- Total --}}
+                        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 mb-6 text-white">
+                            <div class="text-sm opacity-90">Total Belanja</div>
+                            <div class="text-3xl font-bold">
+                                Rp {{ number_format($total_price, 0, ',', '.') }}
+                            </div>
+                        </div>
 
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
-                                        Nama Customer
-                                    </label>
-                                    <input type="text" wire:model="name"
-                                           class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                           placeholder="Masukkan nama customer">
-                                </div>
+                        {{-- Nomor HP --}}
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                                Nomor HP Customer
+                            </label>
+                            <input type="text" wire:model.live="no_hp"
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                placeholder="Masukkan nomor HP" autocomplete="off">
+                            <p class="text-xs text-gray-500 mt-1">Masukkan nomor HP untuk mendeteksi member otomatis.</p>
+                        </div>
 
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
-                                        Metode Pembayaran
-                                    </label>
-                                    <select wire:model.live="payment_method_id"
-                                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                            required>
-                                        <option value="">Pilih metode pembayaran</option>
-                                        @foreach ($payment_methods as $method)
-                                            <option value="{{ $method->id }}">{{ $method->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    @error('payment_method_id')
+                        {{-- Nama Customer --}}
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                                Nama Customer
+                            </label>
+                            <input type="text" wire:model="name"
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                placeholder="Masukkan nama customer">
+                        </div>
+
+                        {{-- Alamat Customer --}}
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                                Alamat
+                            </label>
+                            <textarea wire:model="alamat"
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                rows="2" placeholder="Masukkan alamat customer"></textarea>
+                        </div>
+
+                        {{-- Metode Pembayaran --}}
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                                Metode Pembayaran
+                            </label>
+                            <select wire:model.live="payment_method_id"
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                required>
+                                <option value="">Pilih metode pembayaran</option>
+                                @foreach ($payment_methods as $method)
+                                    <option value="{{ $method->id }}">{{ $method->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('payment_method_id')
+                                <span class="text-red-500 text-sm mt-1">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- ================= KANAN ================= --}}
+                    <div class="col-span-1">
+                        {{-- Kembalian --}}
+                        <div class="mb-6">
+                            <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl p-4 mb-6 text-white">
+                                <div class="text-sm opacity-90">Kembalian</div>
+                                <div class="text-3xl font-bold transition-all duration-300">
+                                    Rp {{ number_format($change, 0, ',', '.') }}
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Nominal Bayar --}}
+                        @if ($is_cash)
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                                    Nominal Bayar
+                                </label>
+                                <div class="relative">
+                                    <span
+                                        class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
+                                        Rp
+                                    </span>
+                                    <input type="text" wire:model.live="cash_received"
+                                        x-data="{
+                                            formatCurrency(value) {
+                                                return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                                            }
+                                        }"
+                                        x-on:input="
+                                            let value = $event.target.value.replace(/\./g, '');
+                                            if (!isNaN(value) && value !== '') {
+                                                $event.target.value = formatCurrency(value);
+                                            } else {
+                                                $event.target.value = '';
+                                            }
+                                        "
+                                        class="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-lg font-medium"
+                                        placeholder="0" required autocomplete="off">
+                                    @error('cash_received')
                                         <span class="text-red-500 text-sm mt-1">{{ $message }}</span>
                                     @enderror
                                 </div>
+
+                                {{-- Quick buttons --}}
+                                <div class="grid grid-cols-3 gap-2 mt-3">
+                                    @php $quickAmounts = [50000, 100000, 150000, 200000, 500000, 1000000]; @endphp
+                                    @foreach ($quickAmounts as $amount)
+                                        <button type="button"
+                                            wire:click="$set('cash_received', '{{ number_format($amount, 0, '', '.') }}')"
+                                            class="py-2 px-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-white transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">
+                                            {{ number_format($amount, 0, ',', '.') }}
+                                        </button>
+                                    @endforeach
+                                </div>
                             </div>
-                            <div class="col-span-1">
-                                <div class="mb-6">
-                                    <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl p-4 mb-6 text-white">
-                                        <div class="text-sm opacity-90">Kembalian</div>
-                                        <div class="text-3xl font-bold transition-all duration-300">
-                                            Rp {{ number_format($change, 0, ',', '.') }}
-                                        </div>
+                        @else
+                            <div class="mb-6">
+                                <div class="rounded-xl p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50">
+                                    <div class="flex items-center space-x-2">
+                                        <svg class="w-8 h-8 text-amber-600 dark:text-amber-400" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                                            </path>
+                                        </svg>
+                                        <span class="text-sm text-amber-700 dark:text-amber-500">
+                                            Pembayaran non-tunai akan diproses sesuai nominal total belanja
+                                        </span>
                                     </div>
                                 </div>
-
-                                @if ($is_cash)
-                                    <div class="mb-4">
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
-                                            Nominal Bayar
-                                        </label>
-                                        <div class="relative">
-                                            <span
-                                                class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
-                                                Rp
-                                            </span>
-                                            <input type="text" wire:model.live="cash_received"
-                                                   x-data="{
-                                                       formatCurrency(value) {
-                                                           return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-                                                       }
-                                                   }"
-                                                   x-on:input="
-                                                       let value = $event.target.value.replace(/\./g, '');
-                                                       if (!isNaN(value) && value !== '') {
-                                                            $event.target.value = formatCurrency(value);
-                                                       } else {
-                                                            $event.target.value = '';
-                                                       }
-                                                   "
-                                                   class="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-lg font-medium"
-                                                   placeholder="0" required autocomplete="off">
-                                            @error('cash_received')
-                                                <span class="text-red-500 text-sm mt-1">{{ $message }}</span>
-                                            @enderror
-                                        </div>
-
-                                        <div class="grid grid-cols-3 gap-2 mt-3">
-                                            @php
-                                                $quickAmounts = [50000, 100000, 150000, 200000, 500000, 1000000];
-                                            @endphp
-                                            @foreach ($quickAmounts as $amount)
-                                                <button type="button"
-                                                    wire:click="$set('cash_received', '{{ number_format($amount, 0, '', '.') }}')"
-                                                    class="py-2 px-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-white transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">
-                                                    {{ number_format($amount, 0, ',', '.') }}
-                                                </button>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @else
-                                    <div class="mb-6">
-                                        <div class="rounded-xl p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50">
-                                            <div class="flex items-center space-x-2">
-                                                <svg class="w-8 h-8 text-amber-600 dark:text-amber-400" fill="none"
-                                                     stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                          stroke-width="2"
-                                                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-                                                    </path>
-                                                </svg>
-                                                <span class="text-sm text-amber-700 dark:text-amber-500">
-                                                    Pembayaran non-tunai akan diproses sesuai nominal total belanja
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endif
                             </div>
-                        </div>
-
-                        <div class="flex gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <button type="button" wire:click="$set('showCheckoutModal', false)"
-                                class="flex-1 py-3 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-[0.98]">
-                                Batal
-                            </button>
-                            <button type="submit" @if ($is_cash && ($change < 0 || empty($cash_received))) disabled @endif
-                                class="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
-                                <span>Bayar</span>
-                            </button>
-                        </div>
-                    </form>
+                        @endif
+                    </div>
                 </div>
-            </div>
+
+                {{-- ================= BOTTOM BUTTONS ================= --}}
+                <div class="flex gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button" wire:click="$set('showCheckoutModal', false)"
+                        class="flex-1 py-3 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-[0.98]">
+                        Batal
+                    </button>
+                    <button type="submit" @if ($is_cash && ($change < 0 || empty($cash_received))) disabled @endif
+                        class="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
+                        <span>Bayar</span>
+                    </button>
+                </div>
+            </form>
         </div>
-    @endif
+    </div>
+</div>
+@endif
     @if ($showConfirmationModal)
         <div wire:ignore.self
             class="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
