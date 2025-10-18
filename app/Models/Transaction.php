@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\TransactionItem;
 
 class Transaction extends Model
 {
@@ -33,6 +34,12 @@ class Transaction extends Model
     public function member()
     {
         return $this->belongsTo(Member::class, 'member_id');
+    }
+
+    public function items()
+    {
+    
+        return $this->hasMany(TransactionItem::class);
     }
 
 }

@@ -6,26 +6,26 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="relative">
                             <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
                             <input wire:model.live.debounce.300ms='search' type="text"
-                                   placeholder="Cari nama atau SKU produk..."
-                                   class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 transition-all duration-200">
+                                placeholder="Cari nama atau SKU produk..."
+                                class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 transition-all duration-200">
                         </div>
 
                         <div class="flex gap-3">
                             <div class="relative flex-1">
                                 <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
+                                        d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
                                     </path>
                                 </svg>
                                 <input wire:model.live='barcode' type="text" placeholder="Scan barcode..." autofocus
-                                       id="barcode"
-                                       class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 transition-all duration-200">
+                                    id="barcode"
+                                    class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 transition-all duration-200">
                             </div>
                             <x-filament::button x-data="" x-on:click="$dispatch('toggle-scanner')"
                                 class="px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
@@ -63,7 +63,7 @@
                                 class="group bg-gray-50 dark:bg-gray-700 rounded-xl shadow-md hover:shadow-2xl transform hover:scale-105 transition-all duration-300 cursor-pointer overflow-hidden">
                                 <div class="relative">
                                     <img src="{{ $item->image ? asset('storage/' . $item->image) : asset('images/default-product.png') }}" alt="{{ $item->name }}"
-                                         class="w-full h-32 object-cover">
+                                        class="w-full h-32 object-cover">
                                 </div>
                                 <div class="p-4">
                                     <h3 class="text-sm font-semibold text-gray-800 dark:text-white line-clamp-2 mb-2">
@@ -129,30 +129,30 @@
                                                 {{ $item['name'] }}
                                             </h4>
                                             
-                                          <div class="relative mt-1"
-     x-data="{
+                                        <div class="relative mt-1"
+   x-data="{
         price: @js($item['selling_price']),
         formatCurrency(value) {
             if (!value) return '';
             return parseInt(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         }
-     }"
-     x-init="$watch('price', value => $wire.set('order_items.{{ $item['product_id'] }}.selling_price', value, true))"
+   }"
+   x-init="$watch('price', value => $wire.set('order_items.{{ $item['product_id'] }}.selling_price', value, true))"
 >
     <span class="absolute left-0 top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400">Rp</span>
     <input type="text"
            x-model="price"
            x-on:input.debounce.500ms="price = $event.target.value.replace(/\./g, '')"
            x-bind:value="formatCurrency(price)"
-            x-init="$el.value = formatCurrency(price)"
+           x-init="$el.value = formatCurrency(price)"
            class="w-full bg-transparent border-0 border-b-2 border-gray-300 dark:border-gray-600 pl-6 p-1 text-sm font-semibold text-gray-600 dark:text-white focus:ring-0 focus:border-green-500 transition">
 </div>
-                                            </div>
+                                        </div>
                                     </div>
                                     <div class="flex items-center justify-between mt-3">
                                         <span class="text-sm text-gray-500 dark:text-gray-400">
-                                             Subtotal: Rp
-                                             {{ number_format($item['selling_price'] * $item['quantity'], 0, ',', '.') }}
+                                            Subtotal: Rp
+                                            {{ number_format($item['selling_price'] * $item['quantity'], 0, ',', '.') }}
                                         </span>
                                         <div class="flex items-center gap-2">
                                             <button wire:click="decreaseQuantity({{ $item['product_id'] }})"
@@ -188,7 +188,7 @@
                         <div class="flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z">
+                                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z">
                                 </path>
                             </svg>
                             Checkout
@@ -372,7 +372,7 @@
                 <div class="p-6">
                     <div class="mx-auto w-20 h-20 mb-4">
                         <svg class="w-full h-full text-green-500 animate-success-check" fill="none"
-                             viewBox="0 0 24 24">
+                            viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"
                                 class="animate-circle-draw" />
                             <path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -423,38 +423,29 @@
                         </h4>
 
                         <div class="grid grid-cols-2 gap-3">
-                            @if (!$print_via_bluetooth)
-                                <button wire:click="printLocalKabel"
-                                    class="flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-[0.98]">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
-                                        </path>
-                                    </svg>
-                                    <span>Cetak Struk</span>
-                                </button>
-                            @else
-                                <button wire:click="printBluetooth"
-                                    class="flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-[0.98]">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0">
-                                        </path>
-                                    </svg>
-                                    <span>Cetak Struk</span>
-                                </button>
-                            @endif
+                            
+                            <a href="http://127.0.0.1:8000/invoice/{{ $orderToPrint }}/pdf"
+                                target="_blank" class="flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-[0.98]">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
+                                    </path>
+                                </svg>
+                                <span>Cetak Struk</span>
+                            </a>
 
                             <button wire:click="$set('showConfirmationModal', false)"
                                 class="flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-[0.98]">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M6 18L18 6M6 6l12 12"></path>
+                                        d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
                                 <span>Lewati</span>
                             </button>
                         </div>
                     </div>
+
+                    {{-- BLOK DUPLIKAT YANG ERROR SUDAH DIHAPUS DARI SINI --}}
 
                     <div class="mt-4 text-center text-xs text-gray-500 dark:text-gray-400" x-data="paymentSuccessTimer()">
                         Modal akan tertutup dalam <span x-text="seconds"></span> detik
