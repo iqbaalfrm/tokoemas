@@ -117,11 +117,11 @@
         </div>
 
         <div class="right-info">
-            <b>Tegal, {{ now()->format('d F Y') }}</b><br>
-            Nama: {{ $transaction->member->name ?? $transaction->name ?? '-' }}<br>
-            Alamat: {{ $transaction->member->alamat ?? $transaction->alamat ?? '-' }}<br>
-            No. Telepon: {{ $transaction->member->no_hp ?? $transaction->no_hp ?? '-' }}<br>
-            <b>No. Trans: {{ $transaction->transaction_number }}</b>
+            <b>Wates, {{ now()->format('d F Y') }}</b><br>
+          Nama: {{ $transaction->member->nama ?? $transaction->name ?? '-' }}<br>
+Alamat: {{ $transaction->member->alamat ?? $transaction->address ?? '-' }}<br>
+No. Telepon: {{ $transaction->member->no_hp ?? $transaction->phone ?? '-' }}<br>
+<b>No. Trans: {{ $transaction->transaction_number }}</b>
             <div class="barcode">
                 <img src="data:image/png;base64,{{ DNS1D::getBarcodePNG($transaction->transaction_number, 'C128', 1.2, 40, [0,0,0], false) }}" alt="barcode" />
             </div>

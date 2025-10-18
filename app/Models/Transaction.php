@@ -16,6 +16,7 @@ class Transaction extends Model
         'address', 'notes', 'total', 'cash_received', 'change'
     ];
 
+
     public function transactionItems()
     {
         return $this->hasMany(TransactionItem::class);

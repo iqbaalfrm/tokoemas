@@ -219,7 +219,7 @@ class Pos extends Component
         $this->name = 'Umum';
     }
 
-    public function checkout()
+   public function checkout()
     {
         $this->validate([
             'payment_method_id' => 'required',
@@ -247,12 +247,20 @@ class Pos extends Component
 
         // 🔹 Auto tambah member baru kalau belum terdaftar
         if (!$this->member_id && !empty($this->no_hp)) {
-            $newMember = Member::create([
-                'nama' => $this->name,
-                'no_hp' => $this->no_hp,
-                'alamat' => $this->alamat,
-            ]);
-            $this->member_id = $newMember->id;
+            
+            // <-- TAMBAHAN PENGECEKAN: Cek lagi biar tidak duplikat
+            $existingMember = Member::where('no_hp', $this->no_hp)->first();
+            if ($existingMember) {
+                $this->member_id = $existingMember->id;
+            } else {
+                // Buat member baru jika tidak ada
+                $newMember = Member::create([
+                    'nama' => $this->name,
+                    'no_hp' => $this->no_hp,
+                    'alamat' => $this->alamat,
+                ]);
+                $this->member_id = $newMember->id;
+            }
         }
 
         $order = Transaction::create([
@@ -260,6 +268,14 @@ class Pos extends Component
             'payment_method_id' => $this->payment_method_id,
             'transaction_number' => TransactionHelper::generateUniqueTrxId(),
             'name' => $this->name,
+            
+            // ===============================================
+            // INI PERBAIKANNYA, MAS
+            // ===============================================
+            'phone' => $this->no_hp,
+            'address' => $this->alamat,
+            // ===============================================
+
             'total' => $this->total_price,
             'cash_received' => $this->is_cash ? $this->getCashReceivedNumeric() : $this->total_price,
             'change' => $this->change,
