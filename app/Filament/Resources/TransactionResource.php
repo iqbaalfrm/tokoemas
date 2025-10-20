@@ -216,7 +216,8 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->color('amber'),
                 Tables\Actions\Action::make('Print')
                     ->label('Cetak')
-                    ->hidden(fn() => Setting::first()->value('print_via_bluetooth')) // Ambil nilai dari model lain
+                    ->hidden(fn () => Setting::first()?->print_via_bluetooth == false)
+                    //->hidden(fn() => Setting::first()->value('print_via_bluetooth')) // Ambil nilai dari model lain
                     ->action(function (Transaction $record) {
                         $directPrint = app(DirectPrintService::class);
                         $directPrint->print($record->id);

@@ -433,7 +433,6 @@
                                 </svg>
                                 <span>Cetak Struk</span>
                             </a>
-
                             <button wire:click="$set('showConfirmationModal', false)"
                                 class="flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-[0.98]">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

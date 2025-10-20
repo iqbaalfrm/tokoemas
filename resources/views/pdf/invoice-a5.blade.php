@@ -156,7 +156,7 @@ No. Telepon: {{ $transaction->member->no_hp ?? $transaction->phone ?? '-' }}<br>
                 <td>{{ strtoupper($item->product->name) }}</td>
                 <td>{{ $item->product->gold_type ?? '8K' }}</td>
                 <td>{{ $item->product->kode_barang ?? '-' }}</td>
-                <td>{{ number_format($item->weight ?? 0, 3) }} Gr</td>
+               <td>{{ number_format($item->weight_gram ?? 0, 3) }} Gr</td>
                 <td>Rp {{ number_format($item->price, 0, ',', '.') }}</td>
             </tr>
         @endforeach

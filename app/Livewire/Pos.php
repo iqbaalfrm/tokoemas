@@ -55,7 +55,6 @@ class Pos extends Component
         $this->payment_methods = PaymentMethod::all();
     }
 
-    // 🔍 Saat no_hp berubah, cek apakah member sudah terdaftar
     public function updatedNoHp($value)
     {
         $member = Member::where('no_hp', $value)->first();
@@ -144,6 +143,9 @@ class Pos extends Component
         $this->resetPage();
     }
 
+    /**
+     * PERBAIKAN 1: Menambahkan 'berat' dari 'weight_gram' produk ke keranjang
+     */
     public function addToOrder($productId)
     {
         $product = Product::find($productId);
@@ -163,6 +165,7 @@ class Pos extends Component
                 'cost_price' => $product->cost_price,
                 'image_url' => $product->image,
                 'quantity' => 1,
+                'berat' => $product->weight_gram, // <-- INI PERBAIKANNYA
             ];
         }
         $this->syncCart();
@@ -219,7 +222,10 @@ class Pos extends Component
         $this->name = 'Umum';
     }
 
-   public function checkout()
+    /**
+     * PERBAIKAN 2: Menyimpan 'berat' dari keranjang ke kolom 'weight_gram'
+     */
+    public function checkout()
     {
         $this->validate([
             'payment_method_id' => 'required',
@@ -245,15 +251,11 @@ class Pos extends Component
             return;
         }
 
-        // 🔹 Auto tambah member baru kalau belum terdaftar
         if (!$this->member_id && !empty($this->no_hp)) {
-            
-            // <-- TAMBAHAN PENGECEKAN: Cek lagi biar tidak duplikat
             $existingMember = Member::where('no_hp', $this->no_hp)->first();
             if ($existingMember) {
                 $this->member_id = $existingMember->id;
             } else {
-                // Buat member baru jika tidak ada
                 $newMember = Member::create([
                     'nama' => $this->name,
                     'no_hp' => $this->no_hp,
@@ -268,14 +270,8 @@ class Pos extends Component
             'payment_method_id' => $this->payment_method_id,
             'transaction_number' => TransactionHelper::generateUniqueTrxId(),
             'name' => $this->name,
-            
-            // ===============================================
-            // INI PERBAIKANNYA, MAS
-            // ===============================================
             'phone' => $this->no_hp,
             'address' => $this->alamat,
-            // ===============================================
-
             'total' => $this->total_price,
             'cash_received' => $this->is_cash ? $this->getCashReceivedNumeric() : $this->total_price,
             'change' => $this->change,
@@ -290,6 +286,7 @@ class Pos extends Component
                 'price' => $item['selling_price'],
                 'cost_price' => $item['cost_price'],
                 'total_profit' => $profit,
+                'weight_gram' => $item['berat'], // <-- INI PERBAIKANNYA
             ]);
         }
 
