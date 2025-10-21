@@ -227,8 +227,6 @@ class DaftarApproval extends Page implements HasForms, HasTable
         
         Notification::make()->title($message)->success()->send();
     }
-    // --- AKHIR PERBAIKAN FUNGSI APPROVE ---
-
     public function reject(Approval $record)
     {
         $record->update([
