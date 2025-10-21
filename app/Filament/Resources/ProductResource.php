@@ -19,6 +19,15 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Milon\Barcode\DNS1D;
+// --- TAMBAHAN USE STATEMENTS ---
+use App\Models\Approval;
+use App\Models\User;
+use App\Notifications\ApprovalDiminta;
+use Filament\Notifications\Notification; // Pastikan ini Notification Filament
+use Illuminate\Database\Eloquent\Model; // Tambahkan jika belum ada
+use Illuminate\Support\Facades\Notification as LaravelNotification; // Alias untuk notif Laravel
+use Filament\Support\Exceptions\Halt; // <-- TAMBAHAN PENTING
+// --- AKHIR TAMBAHAN ---
 
 class ProductResource extends Resource implements HasShieldPermissions
 {
@@ -70,21 +79,13 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->relationship('category', 'name')
                     ->required(),
 
-                Forms\Components\TextInput::make('cost_price')
-                    ->label('Harga Modal')
-                    ->required()
-                    ->numeric()
-                    ->prefix('Rp')
-                    ->live(onBlur: true) // Dibuat reaktif
-                    ->afterStateUpdated(fn (Get $get, Set $set) => self::updatePricesAndProfit($get, $set)),
-
                 Forms\Components\Select::make('gold_type')
                     ->label('Jenis Emas')
                     ->options([
                         'Emas Tua' => 'Emas Tua',
                         'Emas Muda' => 'Emas Muda',
                     ])
-                    ->live() // Dibuat reaktif
+                    ->live()
                     ->afterStateUpdated(fn (Get $get, Set $set) => self::updatePricesAndProfit($get, $set))
                     ->required(),
 
@@ -92,19 +93,12 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->label('Berat (gram)')
                     ->numeric()
                     ->step('0.01')
-                    ->live(onBlur: true) // Dibuat reaktif
+                    ->live(onBlur: true)
                     ->afterStateUpdated(fn (Get $get, Set $set) => self::updatePricesAndProfit($get, $set))
                     ->required(),
 
-                // Field untuk harga jual dan profit otomatis
                 Forms\Components\TextInput::make('selling_price')
                     ->label('Harga Jual Otomatis')
-                    ->prefix('Rp')
-                    ->readOnly()
-                    ->numeric(),
-
-                Forms\Components\TextInput::make('profit')
-                    ->label('Estimasi Profit')
                     ->prefix('Rp')
                     ->readOnly()
                     ->numeric(),
@@ -153,44 +147,36 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->label('Nama Produk')
                     ->description(fn(Product $record): string => $record->category()->withTrashed()->value('name'))
                     ->searchable(),
-
                 Tables\Columns\ImageColumn::make('image')
                     ->disk('public')
                     ->label('Gambar')
                     ->circular(),
-
                 Tables\Columns\TextColumn::make('stock')
                     ->label('Stok')
                     ->numeric()
                     ->sortable(),
-
                 Tables\Columns\TextColumn::make('cost_price')
                     ->label('Harga Modal')
                     ->prefix('Rp ')
                     ->numeric()
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('selling_price') // Menampilkan harga jual yang tersimpan
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true), 
+                Tables\Columns\TextColumn::make('selling_price')
                     ->label('Harga Saat Ini')
                     ->money('IDR', true)
                     ->sortable(),
-
                 Tables\Columns\TextColumn::make('barcode')
                     ->label('No.Barcode')
                     ->searchable(),
-
                 Tables\Columns\TextColumn::make('sku')
                     ->label('SKU')
                     ->searchable(),
-
                 Tables\Columns\BooleanColumn::make('is_active')
                     ->label('Produk Aktif'),
-
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
@@ -210,14 +196,71 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->color('info')
                     ->requiresConfirmation(),
                 Tables\Actions\EditAction::make()->button(),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make(),
+
+                // --- DELETE ACTION (SOFT DELETE) DENGAN APPROVAL ---
+                Tables\Actions\DeleteAction::make()
+                    ->action(function (Product $record) { 
+                        if (auth()->user()->hasRole('super_admin')) {
+                            $record->delete();
+                            Notification::make()->title('Produk dihapus (sementara).')->success()->send();
+                            return;
+                        }
+
+                        if (auth()->user()->hasRole('admin')) {
+                            $approval = Approval::create([
+                                'user_id' => auth()->id(),
+                                'approvable_type' => Product::class,
+                                'approvable_id' => $record->id,
+                                'changes' => ['action' => 'delete'], // Tanda request SOFT DELETE
+                                'status' => 'pending',
+                            ]);
+
+                            $superAdmins = User::role('super_admin')->get();
+                            if ($superAdmins->isNotEmpty()) {
+                                LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
+                            }
+
+                            Notification::make()->title('Menunggu Approval')->body('Permintaan hapus produk (sementara) telah dikirim ke Superadmin.')->success()->send();
+                            throw new Halt(); // Hentikan aksi soft delete default
+                        }
+                    }),
+                // --- AKHIR PERUBAHAN DELETE ACTION ---
+
+                // --- FORCE DELETE ACTION DENGAN APPROVAL ---
+                Tables\Actions\ForceDeleteAction::make()
+                    ->action(function (Product $record) { 
+                        if (auth()->user()->hasRole('super_admin')) {
+                            $record->forceDelete();
+                            Notification::make()->title('Produk dihapus permanen.')->success()->send();
+                            return;
+                        }
+
+                        if (auth()->user()->hasRole('admin')) {
+                            $approval = Approval::create([
+                                'user_id' => auth()->id(),
+                                'approvable_type' => Product::class,
+                                'approvable_id' => $record->id,
+                                'changes' => ['action' => 'force_delete'], 
+                                'status' => 'pending',
+                            ]);
+
+                            $superAdmins = User::role('super_admin')->get();
+                            if ($superAdmins->isNotEmpty()) {
+                                LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
+                            }
+
+                            Notification::make()->title('Menunggu Approval')->body('Permintaan hapus produk permanen telah dikirim ke Superadmin.')->success()->send();
+                            throw new Halt(); // Hentikan aksi force delete default
+                        }
+                    }),
+                // --- AKHIR PERUBAHAN FORCE DELETE ACTION ---
+                    
                 Tables\Actions\RestoreAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
+                    Tables\Actions\ForceDeleteBulkAction::make(), 
                     Tables\Actions\RestoreBulkAction::make(),
                 ]),
                 Tables\Actions\BulkAction::make('printBarcodes')
@@ -241,16 +284,13 @@ class ProductResource extends Resource implements HasShieldPermissions
             ]);
     }
 
-    // --- FUNGSI BARU UNTUK KALKULASI ---
     public static function updatePricesAndProfit(Get $get, Set $set): void
     {
         $goldType = $get('gold_type');
         $weight = floatval($get('weight_gram'));
-        $costPrice = floatval($get('cost_price'));
 
         if (empty($goldType) || empty($weight)) {
             $set('selling_price', 0);
-            $set('profit', 0);
             return;
         }
 
@@ -261,13 +301,10 @@ class ProductResource extends Resource implements HasShieldPermissions
         $pricePerGram = $goldPriceToday?->harga_per_gram ?? 0;
 
         $sellingPrice = $weight * $pricePerGram;
-        $profit = $sellingPrice - $costPrice;
 
         $set('selling_price', $sellingPrice);
-        $set('profit', $profit);
     }
-    
-    // --- FUNGSI RELASI DAN HALAMAN ---
+
     public static function getRelations(): array
     {
         return [];
@@ -280,19 +317,24 @@ class ProductResource extends Resource implements HasShieldPermissions
         ];
     }
 
-    // --- FUNGSI GENERATE BARCODE ---
     protected static function generateBulkBarcode($records)
     {
         $barcodes = [];
         $barcodeGenerator = new DNS1D();
 
         foreach ($records as $product) {
+            if (empty($product->barcode)) continue;
             $barcodes[] = [
                 'name' => $product->name,
-                'price' => $product->selling_price, // Menggunakan harga jual yang tersimpan
+                'price' => $product->selling_price,
                 'barcode' => 'data:image/png;base64,' . $barcodeGenerator->getBarcodePNG($product->barcode, 'C128'),
                 'number' => $product->barcode
             ];
+        }
+
+        if (empty($barcodes)) {
+             Notification::make()->title('Tidak ada barcode untuk dicetak')->warning()->send();
+             return;
         }
 
         $pdf = Pdf::loadView('pdf.barcodes.barcode', compact('barcodes'))->setPaper('a4', 'portrait');

@@ -47,24 +47,33 @@ class DaftarApproval extends Page implements HasForms, HasTable
                     ->label('Admin')
                     ->searchable(),
                 
+                // --- KOLOM INI YANG DIPERBAIKI ---
                 TextColumn::make('approvable_type')
                     ->label('Tipe Permintaan')
                     ->formatStateUsing(function ($state, Approval $record) {
                         $modelName = class_basename($state);
+                        $action = $record->changes['action'] ?? null; // Ambil action
+
                         if ($record->approvable_id === null) {
                             return "BUAT BARU: {$modelName}"; 
                         }
-                        if (isset($record->changes['action']) && $record->changes['action'] === 'force_delete') {
+                        if ($action === 'delete') { // Cek soft delete
+                            return "HAPUS SEMENTARA: {$modelName}";                             
+                        }                                                                        
+                        if ($action === 'force_delete') { // Cek force delete
                             return "HAPUS PERMANEN: {$modelName}";
                         }
-                        return "EDIT DATA: {$modelName}";
+                        // Defaultnya EDIT
+                        return "EDIT DATA: {$modelName}"; 
                     })
                     ->badge()
                     ->color(fn (Approval $record): string => match (true) {
                         $record->approvable_id === null => 'info', 
-                        isset($record->changes['action']) && $record->changes['action'] === 'force_delete' => 'danger',
-                        default => 'warning',
+                        ($record->changes['action'] ?? null) === 'delete' => 'danger', // Warna danger untuk soft delete
+                        ($record->changes['action'] ?? null) === 'force_delete' => 'danger', // Warna danger untuk force delete
+                        default => 'warning', // Warna warning untuk edit
                     }),
+                // --- AKHIR PERBAIKAN KOLOM ---
 
                 TextColumn::make('approvable_id')
                     ->label('Data ID')
@@ -146,17 +155,19 @@ class DaftarApproval extends Page implements HasForms, HasTable
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
-                    // --- BARIS INI DI TAMBAHKAN KEMBALI ---
-                    ->hidden(fn (Approval $record) => isset($record->changes['action']) && $record->changes['action'] === 'force_delete'), 
+                    // Sembunyikan jika request DELETE (baik soft maupun force)
+                    ->hidden(fn (Approval $record) => isset($record->changes['action']) && Str::contains($record->changes['action'], 'delete')), 
                     
                 Action::make('approve')
                     ->label('Approve')
                     ->color('success')
                     ->icon('heroicon-o-check')
                     ->requiresConfirmation()
+                    // --- MODAL HEADING DIPERBAIKI ---
                     ->modalHeading(fn (Approval $record) => match(true) {
                         $record->approvable_id === null => 'Setujui Pembuatan Data Baru?',
-                        isset($record->changes['action']) && $record->changes['action'] === 'force_delete' => 'Hapus Data Ini Permanen?',
+                        ($record->changes['action'] ?? null) === 'delete' => 'Hapus Data Ini (Sementara)?', // Teks untuk soft delete
+                        ($record->changes['action'] ?? null) === 'force_delete' => 'Hapus Data Ini Permanen?',
                         default => 'Approve Perubahan?'
                     })
                     ->modalDescription('Tindakan ini tidak bisa dibatalkan.')
@@ -175,6 +186,7 @@ class DaftarApproval extends Page implements HasForms, HasTable
             ->bulkActions([]);
     }
 
+    // --- FUNGSI APPROVE DIPERBAIKI ---
     public function approve(Approval $record)
     {
         $message = ''; 
@@ -192,10 +204,16 @@ class DaftarApproval extends Page implements HasForms, HasTable
                 return;
             }
 
-            if (isset($record->changes['action']) && $record->changes['action'] === 'force_delete') {
+            $action = $record->changes['action'] ?? null; // Ambil action
+
+            if ($action === 'delete') { // Handle soft delete
+                $model->delete(); 
+                $message = 'Data telah dihapus (sementara).';
+            } 
+            elseif ($action === 'force_delete') { // Handle force delete
                 $model->forceDelete();
                 $message = 'Data telah dihapus permanen.';
-            } else {
+            } else { // Handle edit (default)
                 $model->update($record->changes);
                 $message = 'Perubahan disetujui.';
             }
@@ -209,6 +227,7 @@ class DaftarApproval extends Page implements HasForms, HasTable
         
         Notification::make()->title($message)->success()->send();
     }
+    // --- AKHIR PERBAIKAN FUNGSI APPROVE ---
 
     public function reject(Approval $record)
     {
