@@ -10,8 +10,11 @@ use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\Member;
+use App\Models\User; // <-- TAMBAHKAN INI
+use App\Notifications\TransaksiBaruDibuat; // <-- TAMBAHKAN INI
 use App\Services\DirectPrintService;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Notification as LaravelNotification; // <-- TAMBAHKAN INI
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -143,9 +146,6 @@ class Pos extends Component
         $this->resetPage();
     }
 
-    /**
-     * PERBAIKAN 1: Menambahkan 'berat' dari 'weight_gram' produk ke keranjang
-     */
     public function addToOrder($productId)
     {
         $product = Product::find($productId);
@@ -165,7 +165,7 @@ class Pos extends Component
                 'cost_price' => $product->cost_price,
                 'image_url' => $product->image,
                 'quantity' => 1,
-                'berat' => $product->weight_gram, // <-- INI PERBAIKANNYA
+                'berat' => $product->weight_gram, 
             ];
         }
         $this->syncCart();
@@ -222,9 +222,6 @@ class Pos extends Component
         $this->name = 'Umum';
     }
 
-    /**
-     * PERBAIKAN 2: Menyimpan 'berat' dari keranjang ke kolom 'weight_gram'
-     */
     public function checkout()
     {
         $this->validate([
@@ -277,6 +274,13 @@ class Pos extends Component
             'change' => $this->change,
         ]);
 
+        // --- INI KODE NOTIFIKASI YANG DITAMBAHKAN ---
+        $superAdmins = User::role('super_admin')->get();
+        if ($superAdmins->isNotEmpty()) {
+            LaravelNotification::send($superAdmins, new TransaksiBaruDibuat($order));
+        }
+        // --- AKHIR KODE NOTIFIKASI ---
+
         foreach ($this->order_items as $item) {
             $profit = ($item['selling_price'] - $item['cost_price']) * $item['quantity'];
             TransactionItem::create([
@@ -286,7 +290,7 @@ class Pos extends Component
                 'price' => $item['selling_price'],
                 'cost_price' => $item['cost_price'],
                 'total_profit' => $profit,
-                'weight_gram' => $item['berat'], // <-- INI PERBAIKANNYA
+                'weight_gram' => $item['berat'], 
             ]);
         }
 

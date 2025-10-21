@@ -4,6 +4,8 @@ namespace App\Filament\Resources;
 
 use Filament\Forms;
 use Filament\Tables;
+use App\Models\User; // <-- TAMBAHAN
+use App\Models\Approval; // <-- TAMBAHAN
 use App\Models\Product;
 use App\Models\Setting;
 use Filament\Forms\Form;
@@ -16,6 +18,7 @@ use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
 use App\Services\DirectPrintService;
 use Filament\Support\Exceptions\Halt;
+use App\Notifications\ApprovalDiminta; // <-- TAMBAHAN
 use Filament\Support\Enums\FontWeight;
 use Filament\Forms\Components\Repeater;
 use Filament\Notifications\Notification;
@@ -23,6 +26,7 @@ use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Infolists\Components\TextEntry;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Notification as LaravelNotification; // <-- TAMBAHAN
 use App\Filament\Resources\TransactionResource\Pages;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 
@@ -197,9 +201,9 @@ class TransactionResource extends Resource implements HasShieldPermissions
                             ->when($data['end_date'], fn($query, $date) => $query->whereDate('created_at', '<=', $date));
                     }),
                 Tables\Filters\TrashedFilter::make()
-                ->placeholder('Tanpa return pelanggan')
-                ->trueLabel('Beserta return pelanggan')
-                ->falseLabel('Hanya return pelanggan'),
+                    ->placeholder('Tanpa return pelanggan')
+                    ->trueLabel('Beserta return pelanggan')
+                    ->falseLabel('Hanya return pelanggan'),
             ], layout: Tables\Enums\FiltersLayout::Modal)
             ->actions([
                 Tables\Actions\Action::make('PrintBluetooth')
@@ -217,7 +221,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
                 Tables\Actions\Action::make('Print')
                     ->label('Cetak')
                     ->hidden(fn () => Setting::first()?->print_via_bluetooth == false)
-                    //->hidden(fn() => Setting::first()->value('print_via_bluetooth')) // Ambil nilai dari model lain
+                    ->hidden(fn() => Setting::first()->value('print_via_bluetooth')) // Ambil nilai dari model lain
                     ->action(function (Transaction $record) {
                         $directPrint = app(DirectPrintService::class);
                         $directPrint->print($record->id);
@@ -231,10 +235,40 @@ class TransactionResource extends Resource implements HasShieldPermissions
                         ->color('warning')
                         ->label('Detail'),
                     Tables\Actions\DeleteAction::make()
-                    ->label('Return pelanggan'),
+                        ->label('Return pelanggan'),
+                    
+                    // --- INI BAGIAN YANG DIUBAH ---
                     Tables\Actions\ForceDeleteAction::make()
-                    ->visible()
-                    ->label('Batalkan Transaksi'),
+                        ->visible()
+                        ->label('Batalkan Transaksi')
+                        ->action(function (Transaction $record) {
+                            
+                            if (auth()->user()->hasRole('super_admin')) {
+                                $record->forceDelete();
+                                Notification::make()->title('Transaksi dibatalkan (dihapus permanen).')->success()->send();
+                                return;
+                            }
+
+                            if (auth()->user()->hasRole('admin')) {
+                                $approval = Approval::create([
+                                    'user_id' => auth()->id(),
+                                    'approvable_type' => Transaction::class,
+                                    'approvable_id' => $record->id,
+                                    'changes' => ['action' => 'force_delete'], // Tanda request HAPUS
+                                    'status' => 'pending',
+                                ]);
+
+                                $superAdmins = User::role('super_admin')->get();
+                                if ($superAdmins->isNotEmpty()) {
+                                    LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
+                                }
+
+                                Notification::make()->title('Menunggu Approval')->body('Permintaan pembatalan transaksi telah dikirim ke Superadmin.')->success()->send();
+                                return;
+                            }
+                        }),
+                    // --- AKHIR PERUBAHAN ---
+                        
                     Tables\Actions\RestoreAction::make(),
                 ])
                 ->tooltip('Tindakan'),
@@ -254,7 +288,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
     }
 
     
-     public static function getItemsRepeater(): Repeater
+    public static function getItemsRepeater(): Repeater
     {
         return Repeater::make('transactionItems')
             ->hiddenLabel()
@@ -402,33 +436,33 @@ class TransactionResource extends Resource implements HasShieldPermissions
     }
 
 
-   protected static function updateTotalPrice(Forms\Get $get, Forms\Set $set): void
-{
-    $selectedProducts = collect($get('transactionItems'))
-        ->filter(fn($item) => !empty($item['product_id']) && !empty($item['quantity']));
+    protected static function updateTotalPrice(Forms\Get $get, Forms\Set $set): void
+    {
+        $selectedProducts = collect($get('transactionItems'))
+            ->filter(fn($item) => !empty($item['product_id']) && !empty($item['quantity']));
 
-    $ids = $selectedProducts->pluck('product_id')->all();
-    $products = Product::withTrashed()->whereIn('id', $ids)->get();
+        $ids = $selectedProducts->pluck('product_id')->all();
+        $products = Product::withTrashed()->whereIn('id', $ids)->get();
 
-    $missingProducts = $selectedProducts->filter(fn($item) => !$products->contains('id', $item['product_id']));
+        $missingProducts = $selectedProducts->filter(fn($item) => !$products->contains('id', $item['product_id']));
 
-    if ($missingProducts->isNotEmpty()) {
-        Notification::make()
-            ->title('Beberapa produk tidak tersedia')
-            ->danger()
-            ->send();
+        if ($missingProducts->isNotEmpty()) {
+            Notification::make()
+                ->title('Beberapa produk tidak tersedia')
+                ->danger()
+                ->send();
+        }
+
+        $prices = $products->pluck('price', 'id');
+        $total = $selectedProducts->reduce(function ($total, $item) use ($prices) {
+            $productId = $item['product_id'];
+            $price = $prices[$productId] ?? 0;
+            $quantity = $item['quantity'];
+            return $total + ($price * $quantity);
+        }, 0);
+
+        $set('total', $total);
     }
-
-    $prices = $products->pluck('price', 'id');
-    $total = $selectedProducts->reduce(function ($total, $item) use ($prices) {
-        $productId = $item['product_id'];
-        $price = $prices[$productId] ?? 0;
-        $quantity = $item['quantity'];
-        return $total + ($price * $quantity);
-    }, 0);
-
-    $set('total', $total);
-}
 
 
     protected static function updateExcangePaid(Forms\Get $get, Forms\Set $set): void

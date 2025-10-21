@@ -17,6 +17,16 @@ use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\CashFlowResource\Pages;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+// --- TAMBAHAN USE STATEMENTS ---
+use App\Models\Approval;
+use App\Models\User;
+use App\Notifications\ApprovalDiminta;
+use Filament\Notifications\Notification as FilamentNotification;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Notification as LaravelNotification;
+use Filament\Support\Exceptions\Halt;
+// --- AKHIR TAMBAHAN ---
+
 
 class CashFlowResource extends Resource implements HasShieldPermissions
 {
@@ -41,9 +51,9 @@ class CashFlowResource extends Resource implements HasShieldPermissions
     protected static ?string $navigationGroup = 'Menejemen keuangan';
 
     public static function getNavigationBadge(): ?string
-{
-    return static::getModel()::count();
-}
+    {
+        return static::getModel()::count();
+    }
 
     public static function form(Form $form): Form
     {
@@ -59,7 +69,8 @@ class CashFlowResource extends Resource implements HasShieldPermissions
                     ->grouped()
                     ->live(),
                 Forms\Components\Select::make('source')
-                    ->options(fn(Get $get) => CashFlowLabelService::getSourceOptionsByType($get('type'))),
+                    ->options(fn(Get $get) => CashFlowLabelService::getSourceOptionsByType($get('type')))
+                    ->required(), // Tambahkan required jika perlu
                 Forms\Components\TextInput::make('amount')
                     ->prefix('Rp ')
                     ->required()
@@ -79,12 +90,12 @@ class CashFlowResource extends Resource implements HasShieldPermissions
                     ->date('d F Y')
                     ->sortable(),
                 Tables\Columns\BadgeColumn::make('type')
-                ->formatStateUsing(fn($state) => CashFlowLabelService::getTypeLabel($state))
-                ->colors([
-                    'success' => CashFlowLabelService::TYPE_INCOME,
-                    'danger' => CashFlowLabelService::TYPE_EXPENSE,
-                ])
-                ->icon(fn (string $state): string => match ($state) {
+                    ->formatStateUsing(fn($state) => CashFlowLabelService::getTypeLabel($state))
+                    ->colors([
+                        'success' => CashFlowLabelService::TYPE_INCOME,
+                        'danger' => CashFlowLabelService::TYPE_EXPENSE,
+                    ])
+                    ->icon(fn (string $state): string => match ($state) {
                         CashFlowLabelService::TYPE_INCOME => 'heroicon-o-arrow-down-circle',
                         CashFlowLabelService::TYPE_EXPENSE => 'heroicon-o-arrow-up-circle',
                     }),
@@ -151,13 +162,13 @@ class CashFlowResource extends Resource implements HasShieldPermissions
             ], layout: Tables\Enums\FiltersLayout::Modal)
             ->actions([
                 Tables\Actions\EditAction::make()
-                ->visible(fn($record) => 
-                $record->source !== 'sales' &&
-                $record->source !== 'adjustment' &&
-                $record->source !== 'restored_sales' &&
-                $record->source !== 'refund' &&
-                $record->source !== 'purchase_stock' 
-            ),
+                    ->visible(fn($record) => 
+                        $record->source !== 'sales' &&
+                        $record->source !== 'adjustment' &&
+                        $record->source !== 'restored_sales' &&
+                        $record->source !== 'refund' &&
+                        $record->source !== 'purchase_stock' 
+                    ),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -173,12 +184,16 @@ class CashFlowResource extends Resource implements HasShieldPermissions
         ];
     }
 
+    // --- FUNGSI INI DIUBAH ---
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListCashFlows::route('/'),
+            'create' => Pages\CreateCashFlow::route('/create'), // Panggil page create baru
+            'edit' => Pages\EditCashFlow::route('/{record}/edit'), // Panggil page edit baru
         ];
     }
+    // --- AKHIR PERUBAHAN ---
 
     public static function getWidgets(): array
     {
