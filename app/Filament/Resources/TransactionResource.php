@@ -4,10 +4,10 @@ namespace App\Filament\Resources;
 
 use Filament\Forms;
 use Filament\Tables;
-use App\Models\User; // <-- TAMBAHAN
-use App\Models\Approval; // <-- TAMBAHAN
+use App\Models\User;
+use App\Models\Approval;
 use App\Models\Product;
-use App\Models\Setting;
+use App\Models\Setting; // Pastikan Setting model ada dan benar
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use App\Models\Transaction;
@@ -16,9 +16,9 @@ use App\Models\TransactionItem;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
-use App\Services\DirectPrintService;
+// use App\Services\DirectPrintService; // Tidak dipakai lagi
 use Filament\Support\Exceptions\Halt;
-use App\Notifications\ApprovalDiminta; // <-- TAMBAHAN
+use App\Notifications\ApprovalDiminta;
 use Filament\Support\Enums\FontWeight;
 use Filament\Forms\Components\Repeater;
 use Filament\Notifications\Notification;
@@ -26,7 +26,7 @@ use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Infolists\Components\TextEntry;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Notification as LaravelNotification; // <-- TAMBAHAN
+use Illuminate\Support\Facades\Notification as LaravelNotification;
 use App\Filament\Resources\TransactionResource\Pages;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 
@@ -120,7 +120,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
                                         $paymentMethod = PaymentMethod::find($state);
                                         $set('is_cash', $paymentMethod?->is_cash ?? false);
 
-                                        if (!$paymentMethod->is_cash) {
+                                        if (!$paymentMethod?->is_cash) {
                                             $set('change', 0);
                                             $set('cash_received', $get('total'));
                                         }
@@ -143,8 +143,6 @@ class TransactionResource extends Resource implements HasShieldPermissions
                                     ->label('Nominal Bayar')
                                     ->readOnly(fn(Forms\Get $get) => $get('is_cash') == false)
                                     ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
-                                        // function untuk menghitung uang kembalian
-
                                         self::updateExcangePaid($get, $set);
                                     }),
                                 Forms\Components\TextInput::make('change')
@@ -177,8 +175,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->prefix('Rp ')
                     ->numeric(),
                 Tables\Columns\BadgeColumn::make('paymentMethod.name')
-                    ->label('Pembayaran')
-                    ->numeric(),
+                    ->label('Pembayaran'), // Hapus ->numeric() jika bukan angka
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -206,28 +203,15 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->falseLabel('Hanya return pelanggan'),
             ], layout: Tables\Enums\FiltersLayout::Modal)
             ->actions([
-                Tables\Actions\Action::make('PrintBluetooth')
-                    ->label('Cetak')
-                    ->hidden(fn() => Setting::first()->value('print_via_bluetooth') == false) // Ambil nilai dari model lain
-                    ->action(function ($record, $livewire) {
-                        $order = Transaction::with(['paymentMethod', 'transactionItems.product'])->findOrFail($record->id);
-                        $items = $order->transactionItems;
-
-
-                        $livewire->printStruk($order,$items);
-                    })
+                // --- TOMBOL CETAK PDF ---
+                Tables\Actions\Action::make('Cetak PDF')
+                    ->label('Cetak PDF')
                     ->icon('heroicon-o-printer')
-                    ->color('amber'),
-                Tables\Actions\Action::make('Print')
-                    ->label('Cetak')
-                    ->hidden(fn () => Setting::first()?->print_via_bluetooth == false)
-                    ->hidden(fn() => Setting::first()->value('print_via_bluetooth')) // Ambil nilai dari model lain
-                    ->action(function (Transaction $record) {
-                        $directPrint = app(DirectPrintService::class);
-                        $directPrint->print($record->id);
-                    })
-                    ->icon('heroicon-o-printer')
-                    ->color('amber'),
+                    ->color('amber')
+                    ->url(fn (Transaction $record): string => "https://firmanalabs.dev/invoice/{$record->id}/pdf") // <-- URL kamu
+                    ->openUrlInNewTab(),
+                // --- AKHIR TOMBOL CETAK PDF ---
+
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\EditAction::make()
                         ->visible(fn($record) => !$record->trashed()),
@@ -235,40 +219,34 @@ class TransactionResource extends Resource implements HasShieldPermissions
                         ->color('warning')
                         ->label('Detail'),
                     Tables\Actions\DeleteAction::make()
-                        ->label('Return pelanggan'),
-                    
-                    // --- INI BAGIAN YANG DIUBAH ---
+                        ->label('Return pelanggan')
+                        // Tambahkan action approval jika perlu
+                        ,
                     Tables\Actions\ForceDeleteAction::make()
                         ->visible()
                         ->label('Batalkan Transaksi')
                         ->action(function (Transaction $record) {
-                            
                             if (auth()->user()->hasRole('super_admin')) {
                                 $record->forceDelete();
                                 Notification::make()->title('Transaksi dibatalkan (dihapus permanen).')->success()->send();
                                 return;
                             }
-
                             if (auth()->user()->hasRole('admin')) {
                                 $approval = Approval::create([
                                     'user_id' => auth()->id(),
                                     'approvable_type' => Transaction::class,
                                     'approvable_id' => $record->id,
-                                    'changes' => ['action' => 'force_delete'], // Tanda request HAPUS
+                                    'changes' => ['action' => 'force_delete'],
                                     'status' => 'pending',
                                 ]);
-
                                 $superAdmins = User::role('super_admin')->get();
                                 if ($superAdmins->isNotEmpty()) {
                                     LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
                                 }
-
                                 Notification::make()->title('Menunggu Approval')->body('Permintaan pembatalan transaksi telah dikirim ke Superadmin.')->success()->send();
-                                return;
+                                throw new Halt();
                             }
                         }),
-                    // --- AKHIR PERUBAHAN ---
-                        
                     Tables\Actions\RestoreAction::make(),
                 ])
                 ->tooltip('Tindakan'),
@@ -282,21 +260,18 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->label('Batalkan Transaksi')
                     ->button(),
                     Tables\Actions\RestoreBulkAction::make(),
-                    // ...
             ])
             ->headerActions([]);
     }
 
-    
+
     public static function getItemsRepeater(): Repeater
     {
         return Repeater::make('transactionItems')
             ->hiddenLabel()
             ->relationship()
             ->live()
-            ->columns([
-                'md' => 10,
-            ])
+            ->columns(['md' => 10])
             ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set) {
                 self::updateTotalPrice($get, $set);
             })
@@ -306,25 +281,19 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->required()
                     ->options(function (Forms\Get $get) {
                         $selectedId = $get('product_id');
-                        // Ambil produk aktif (stock > 1)
-                        $productsQuery = Product::query()
-                            ->where('stock', '>', 0);
-                        // Jika produk yang sedang dipilih sudah soft deleted, tetap sertakan
+                        $productsQuery = Product::query()->where('stock', '>', 0);
                         if ($selectedId) {
                             $productsQuery->orWhere('id', $selectedId);
                         }
-                        // Ambil semua termasuk soft deleted
                         return $productsQuery->pluck('name', 'id');
                     })
-
-                    ->columnSpan([
-                        'md' => 5
-                    ])
+                    ->columnSpan(['md' => 5])
                     ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
                         $product = Product::withTrashed()->find($state);
                         $set('cost_price', $product->cost_price ?? 0);
-                        $set('price', $product->price ?? 0);
-                        $set('total_profit', ($product->price ?? 0) - ($product->cost_price ?? 0) ?? 0);
+                        $set('price', $product->price ?? 0); // Pastikan field ini benar (price atau selling_price?)
+                        $quantity = $get('quantity') ?? 1;
+                        $set('total_profit', (($product->price ?? 0) - ($product->cost_price ?? 0)) * $quantity);
                         self::updateTotalPrice($get, $set);
                     })
                     ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
@@ -333,64 +302,39 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->numeric()
                     ->default(1)
                     ->minValue(1)
-                    ->columnSpan([
-                        'md' => 5
-                    ])
+                    ->columnSpan(['md' => 5])
                     ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
                         $id = $get('product_id');
                         $product = Product::withTrashed()->find($id);
-                            $quantity = (int) ($get('quantity') ?? 0);
-                            $price = (int) ($product->price ?? 0);
-                            $costPrice = (int) ($product->cost_price ?? 0);
-                            $set('total_profit', ($price - $costPrice) * $quantity);
-                            self::updateTotalPrice($get, $set);
+                        $quantity = (int) ($state ?? 0);
+                        $price = (int) ($product->price ?? 0); // Pastikan field ini benar
+                        $costPrice = (int) ($product->cost_price ?? 0);
+                        $set('total_profit', ($price - $costPrice) * $quantity);
+                        self::updateTotalPrice($get, $set);
                     }),
                 Forms\Components\TextInput::make('cost_price')
                     ->label('Harga Modal')
-                    ->required()
+                    ->required() // Mungkin tidak perlu required jika otomatis terisi
                     ->numeric()
                     ->readOnly()
-                    ->columnSpan([
-                        'md' => 3
-                    ]),
-                Forms\Components\TextInput::make('price')
+                    ->columnSpan(['md' => 3]),
+                Forms\Components\TextInput::make('price') // Pastikan field ini benar
                     ->label('Harga jual')
-                    ->required()
+                    ->required() // Mungkin tidak perlu required jika otomatis terisi
                     ->numeric()
                     ->readOnly()
-                    ->columnSpan([
-                        'md' => 3
-                    ]),
+                    ->columnSpan(['md' => 3]),
                 Forms\Components\TextInput::make('total_profit')
                     ->label('Profit')
-                    ->required()
+                    ->required() // Mungkin tidak perlu required jika otomatis terisi
                     ->numeric()
                     ->readOnly()
-                    ->columnSpan([
-                        'md' => 3
-                    ]),
-
-            ])
-            ->mutateRelationshipDataBeforeSaveUsing(function (array $data) {
-            $invalidProducts = collect($data['transactionItems'] ?? [])
-                ->filter(function ($item) {
-                    $product = Product::withTrashed()->find($item['product_id']);
-                    return !$product || $product->trashed();
-                });
-
-            if ($invalidProducts->isEmpty()) {
-                Notification::make()
-                    ->title('Tidak dapat menyimpan')
-                    ->body('Ada produk yang telah dihapus dari sistem.')
-                    ->danger()
-                    ->send();
-
-                throw new Halt('Produk tidak valid.');
-            }
-
-            return $data;
-        });
-    }
+                    ->columnSpan(['md' => 3]),
+            ]); 
+            
+            
+            
+    } 
 
     public static function infolist(Infolist $infolist): Infolist
     {
@@ -444,16 +388,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
         $ids = $selectedProducts->pluck('product_id')->all();
         $products = Product::withTrashed()->whereIn('id', $ids)->get();
 
-        $missingProducts = $selectedProducts->filter(fn($item) => !$products->contains('id', $item['product_id']));
-
-        if ($missingProducts->isNotEmpty()) {
-            Notification::make()
-                ->title('Beberapa produk tidak tersedia')
-                ->danger()
-                ->send();
-        }
-
-        $prices = $products->pluck('price', 'id');
+        $prices = $products->pluck('price', 'id'); // Pastikan field ini benar (price atau selling_price?)
         $total = $selectedProducts->reduce(function ($total, $item) use ($prices) {
             $productId = $item['product_id'];
             $price = $prices[$productId] ?? 0;
@@ -467,8 +402,8 @@ class TransactionResource extends Resource implements HasShieldPermissions
 
     protected static function updateExcangePaid(Forms\Get $get, Forms\Set $set): void
     {
-        $paidAmount = (int) $get('cash_received') ?? 0;
-        $totalPrice = (int) $get('total') ?? 0;
+        $paidAmount = (int) ($get('cash_received') ?? 0); // Tambahkan ?? 0
+        $totalPrice = (int) ($get('total') ?? 0); // Tambahkan ?? 0
         $exchangePaid = $paidAmount - $totalPrice;
         $set('change', $exchangePaid);
     }
