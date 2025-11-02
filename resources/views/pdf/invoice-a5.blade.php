@@ -105,7 +105,7 @@
     <div class="header">
         <div class="left">
             <div class="logo">
-                <img src="{{ public_path('images/dummy-logo.png') }}" alt="Logo">
+          <img src="{{ public_path('images/logo1.jpg') }}" alt="Logo" style="width: 60px; height: auto;">
             </div>
             <div class="toko-info">
                 <b>Toko Mas Hartono Wiyono</b><br>

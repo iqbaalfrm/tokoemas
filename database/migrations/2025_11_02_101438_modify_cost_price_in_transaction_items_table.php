@@ -12,8 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transaction_items', function (Blueprint $table) {
-            // Ini akan menambahkan kolom weight_gram dengan tipe decimal
-            $table->decimal('weight_gram', 8, 2)->default(0)->after('total_profit');
+            // Ubah kolom cost_price agar boleh null (nullable)
+            // Sesuaikan angka 15, 2 jika di migrasi lama Anda beda
+            $table->decimal('cost_price', 15, 2)->nullable()->change();
         });
     }
 
@@ -23,7 +24,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('transaction_items', function (Blueprint $table) {
-            $table->dropColumn('weight_gram');
+            // Ini untuk membatalkan (jika perlu)
+            $table->decimal('cost_price', 15, 2)->nullable(false)->change();
         });
     }
 };

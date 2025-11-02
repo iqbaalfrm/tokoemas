@@ -12,10 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            // --- TAMBAHKAN BARIS INI ---
-            $table->decimal('weight_gram', 8, 
-2)->default(0.00)->after('gold_type'); 
-            // --------------------------
+            // Kita TAMBAHKAN kolom 'cost_price'
+            // Pilih salah satu dari dua baris di bawah ini:
+
+            // Pilihan 1 (Jika cost_price boleh kosong/NULL)
+            $table->decimal('cost_price', 15, 2)->nullable()->after('selling_price');
+
+            // Pilihan 2 (Jika cost_price default-nya 0)
+            // $table->decimal('cost_price', 15, 2)->default(0)->after('selling_price');
         });
     }
 
@@ -25,9 +29,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            // --- TAMBAHKAN BARIS INI (Untuk bisa rollback) ---
-            $table->dropColumn('weight_gram');
-            // ------------------------------------------------
+            // Ini untuk membatalkan jika perlu
+            $table->dropColumn('cost_price');
         });
     }
 };
