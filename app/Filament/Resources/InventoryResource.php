@@ -65,12 +65,6 @@ class InventoryResource extends Resource implements HasShieldPermissions
                             ->label('Sumber')
                             ->required()
                             ->options(fn(Get $get) => InventoryLabelService::getSourceOptionsByType($get('type'))),
-                        Forms\Components\TextInput::make('total')
-                            ->label('Total Modal')
-                            ->prefix('Rp ')
-                            ->required()
-                            ->numeric()
-                            ->readOnly(),
                     ])->columns(3),
                 Forms\Components\Section::make('Pemilihan Produk')->schema([
                     self::getItemsRepeater(),
@@ -112,9 +106,6 @@ class InventoryResource extends Resource implements HasShieldPermissions
                 Tables\Columns\TextColumn::make('source')
                 ->label('Sumber')
                 ->formatStateUsing(fn($state, $record) => InventoryLabelService::getSourceLabel($record->type,$state)),
-                Tables\Columns\TextColumn::make('total')
-                ->numeric()
-                ->prefix('Rp '),
                 Tables\Columns\TextColumn::make('notes')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
@@ -152,11 +143,8 @@ class InventoryResource extends Resource implements HasShieldPermissions
             ->relationship()
             ->live()
             ->columns([
-                'md' => 10,
+                'md' => 8,
             ])
-            ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set) {
-                self::updateTotalPrice($get, $set);
-            })
             ->schema([
                 Forms\Components\Select::make('product_id')
                     ->label('Produk')
@@ -173,22 +161,11 @@ class InventoryResource extends Resource implements HasShieldPermissions
                         $product = Product::find($state);
                         $set('stock', $product->stock ?? 0);
                     })
-                    ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
+                    ->afterStateUpdated(function ($state, Forms\Set $set) {
                         $product = Product::find($state);
-                        $set('cost_price', $product->cost_price ?? 0);
                         $set('stock', $product->stock ?? 0);
-                        self::updateTotalPrice($get, $set);
                     })
                     ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
-                Forms\Components\TextInput::make('cost_price')
-                    ->label('Harga Modal')
-                    ->required()
-                    ->numeric()
-                    ->prefix('Rp ')
-                    ->readOnly()
-                    ->columnSpan([
-                        'md' => 2
-                    ]),
                 Forms\Components\TextInput::make('stock')
                     ->label('Stok Saat Ini')
                     ->required()
@@ -204,27 +181,8 @@ class InventoryResource extends Resource implements HasShieldPermissions
                     ->minValue(1)
                     ->columnSpan([
                         'md' => 2
-                    ])
-                    ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
-                        self::updateTotalPrice($get, $set);
-                    }),
+                    ]),
             ]);
-    }
-
-    protected static function updateTotalPrice(Forms\Get $get, Forms\Set $set): void
-    {
-        $selectedProducts = collect($get('inventoryItems'))->filter(fn($item) => !empty($item['product_id']) && !empty($item['quantity']));
-
-        $prices = Product::find($selectedProducts->pluck('product_id'))->pluck('cost_price', 'id');
-        $total = $selectedProducts->reduce(function ($total, $product) use ($prices) {
-            return $total + ($prices[$product['product_id']] * $product['quantity']);
-        }, 0);
-
-        if ($get('type') !== 'adjustment') {
-            $set('total', $total);
-        } else {
-            $set('total', 0);
-        }
     }
 
     public static function getPages(): array
