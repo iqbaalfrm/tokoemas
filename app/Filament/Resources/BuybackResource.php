@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BuybackResource\Pages;
 use App\Models\Buyback;
+use App\Models\Product; 
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -12,7 +13,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\Action;
-use Filament\Tables\Columns\BadgeColumn;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -53,7 +53,13 @@ class BuybackResource extends Resource
                             ->readOnly()
                             ->default(0)
                             ->suffix('g'),
-                    ])->columns(3),
+                        Forms\Components\TextInput::make('total_amount_paid')
+                            ->label('Total Pembayaran')
+                            ->numeric()
+                            ->readOnly()
+                            ->prefix('Rp')
+                            ->default(0),
+                    ])->columns(4), 
 
                 Forms\Components\Section::make('Barang yang di-Buyback')
                     ->schema([
@@ -68,7 +74,14 @@ class BuybackResource extends Resource
                                     ->numeric()
                                     ->required()
                                     ->suffix('g')
-                                    ->live(onBlur: true),
+                                    ->live(onBlur: true), 
+                                Forms\Components\TextInput::make('item_total_price')
+                                    ->label('Harga Beli')
+                                    ->numeric()
+                                    ->prefix('Rp')
+                                    ->required()
+                                    ->live(onBlur: true)
+                                    ->default(0),
                                 Forms\Components\FileUpload::make('foto')
                                     ->disk('public')
                                     ->directory('buyback-photos')
@@ -76,20 +89,25 @@ class BuybackResource extends Resource
                                     ->imageEditor()
                                     ->columnSpanFull(),
                             ])
-                            ->columns(3)
+                            ->columns(4) 
                             ->addActionLabel('Tambahkan item buyback')
-                            ->live()
+                            ->live() 
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 $items = $get('buybackItems');
                                 $totalWeight = 0;
+                                $totalPrice = 0;
                                 if (is_array($items)) {
                                     foreach ($items as $item) {
                                         if (!empty($item['berat']) && is_numeric($item['berat'])) {
                                             $totalWeight += floatval($item['berat']);
                                         }
+                                        if (!empty($item['item_total_price']) && is_numeric($item['item_total_price'])) {
+                                            $totalPrice += floatval($item['item_total_price']);
+                                        }
                                     }
                                 }
                                 $set('berat_total', $totalWeight);
+                                $set('total_amount_paid', $totalPrice);
                             }),
                     ]),
 
@@ -106,7 +124,7 @@ class BuybackResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('tanggal')->date('d M Y')->sortable(),
-                BadgeColumn::make('tipe')
+                Tables\Columns\BadgeColumn::make('tipe')
                     ->colors([
                         'info' => 'pelanggan',
                         'success' => 'pembelian_stok',
@@ -114,6 +132,10 @@ class BuybackResource extends Resource
                     ->formatStateUsing(fn (string $state): string => Str::title(str_replace('_', ' ', $state)))
                     ->searchable(),
                 Tables\Columns\TextColumn::make('berat_total')->suffix(' g')->sortable(),
+                Tables\Columns\TextColumn::make('total_amount_paid')
+                    ->label('Total Pembayaran')
+                    ->money('IDR', true)
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('buyback_items_count')->counts('buybackItems')->label('Jumlah Item'),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -129,7 +151,8 @@ class BuybackResource extends Resource
                         ['items' => $record->buybackItems()->whereNotNull('foto')->get()]
                     ))
                     ->modalSubmitAction(false)
-                    ->modalCancelAction(false),
+                    ->modalCancelAction(false)
+                    ->modalWidth('2xl'),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
