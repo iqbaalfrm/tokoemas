@@ -9,7 +9,7 @@ class Inventory extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['type', 'source', 'total', 'notes'];
+    protected $fillable = ['type', 'source', 'total', 'total_cost', 'notes'];
 
     public function inventoryItems()
     {
