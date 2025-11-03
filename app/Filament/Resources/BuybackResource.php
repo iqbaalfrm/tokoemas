@@ -114,7 +114,7 @@ class BuybackResource extends Resource
                     ->formatStateUsing(fn (string $state): string => Str::title(str_replace('_', ' ', $state)))
                     ->searchable(),
                 Tables\Columns\TextColumn::make('berat_total')->suffix(' g')->sortable(),
-                Tables\Columns\TextColumn::make('buybackItems_count')->counts('buybackItems')->label('Jumlah Item'),
+                Tables\Columns\TextColumn::make('buyback_items_count')->counts('buybackItems')->label('Jumlah Item'),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
