@@ -31,6 +31,7 @@ class CategoryResource extends Resource implements HasShieldPermissions
             'force_delete_any',
         ];
     }
+    
     protected static ?string $model = Category::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-tag';
@@ -41,20 +42,17 @@ class CategoryResource extends Resource implements HasShieldPermissions
 
     protected static ?int $navigationSort = 1;
 
-
     public static function getNavigationBadge(): ?string
-{
-    return static::getModel()::count();
-}
-
-public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ])->orderBy('created_at', 'desc');
+        return static::getModel()::count();
     }
 
-
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->withoutGlobalScopes([
+            SoftDeletingScope::class,
+        ])->orderBy('created_at', 'desc');
+    }
 
     public static function form(Form $form): Form
     {
@@ -74,12 +72,10 @@ public static function getEloquentQuery(): Builder
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nama Kategori')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('products.count')
+                Tables\Columns\TextColumn::make('products_count')
                     ->label('Jumlah Produk')
                     ->alignCenter()
-                    ->getStateUsing(function (Category $record) {
-                        return $record->products->count();
-                    }),
+                    ->counts('products'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -100,9 +96,9 @@ public static function getEloquentQuery(): Builder
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                Tables\Actions\DeleteBulkAction::make(),
-                Tables\Actions\ForceDeleteBulkAction::make(),
-                Tables\Actions\RestoreBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\ForceDeleteBulkAction::make(),
+                    Tables\Actions\RestoreBulkAction::make(),
                 ]),
             ]);
     }
@@ -110,7 +106,8 @@ public static function getEloquentQuery(): Builder
     public static function getRelations(): array
     {
         return [
-            RelationManagers\ProductsRelationManager::class
+            RelationManagers\SubCategoriesRelationManager::class,
+            RelationManagers\ProductsRelationManager::class,
         ];
     }
 
@@ -122,4 +119,6 @@ public static function getEloquentQuery(): Builder
             'edit' => Pages\EditCategory::route('/{record}/edit'),
         ];
     }
+
+    
 }

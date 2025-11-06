@@ -6,22 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\GoldPrice;
+use App\Models\SubCategory;
+use App\Models\TransactionItem;
 
 class Product extends Model
 {
     use HasFactory, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
-        'category_id',
+        'sub_category_id',
         'name',
         'stock',
         'cost_price',
         'gold_type',
+        'gold_karat',
         'weight_gram',
         'image',
         'barcode',
@@ -32,47 +30,32 @@ class Product extends Model
         'profit',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'weight_gram' => 'float',
     ];
 
-    // Relasi ke model Category
-    public function category() {
-        return $this->belongsTo(Category::class);
+    public function subCategory()
+    {
+        return $this->belongsTo(SubCategory::class);
     }
 
-    // Relasi ke model TransactionItem
     public function transactionItems() {
         return $this->hasMany(TransactionItem::class);
     }
 
-    /**
-     * Accessor untuk mendapatkan harga per gram terbaru sesuai jenis emas produk.
-     * Berguna untuk menampilkan harga pasar saat ini di tabel.
-     */
     public function getCurrentPricePerGramAttribute(): ?int
     {
         if (!$this->gold_type) {
             return null;
         }
 
-        // Asumsi Anda punya scope 'latestFor' di model GoldPrice
         $gp = GoldPrice::where('jenis_emas', $this->gold_type)
-                       ->orderBy('tanggal', 'desc')
-                       ->first();
+                            ->orderBy('tanggal', 'desc')
+                            ->first();
 
         return $gp?->harga_per_gram ? (int) $gp->harga_per_gram : null;
     }
 
-    /**
-     * Accessor untuk menghitung total harga produk berdasarkan harga emas TERBARU.
-     * Berguna untuk kolom 'computed_price' di tabel Anda.
-     */
     public function getComputedPriceAttribute(): ?int
     {
         if (!$this->gold_type || !$this->weight_gram) {

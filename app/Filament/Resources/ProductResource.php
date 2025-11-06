@@ -6,6 +6,7 @@ use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Category;
 use App\Models\GoldPrice;
 use App\Models\Product;
+use App\Models\SubCategory; 
 use Barryvdh\DomPDF\Facade\Pdf;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Carbon\Carbon;
@@ -19,15 +20,15 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Milon\Barcode\DNS1D;
-// --- TAMBAHAN USE STATEMENTS ---
 use App\Models\Approval;
 use App\Models\User;
 use App\Notifications\ApprovalDiminta;
-use Filament\Notifications\Notification; // Pastikan ini Notification Filament
-use Illuminate\Database\Eloquent\Model; // Tambahkan jika belum ada
-use Illuminate\Support\Facades\Notification as LaravelNotification; // Alias untuk notif Laravel
-use Filament\Support\Exceptions\Halt; // <-- TAMBAHAN PENTING
-// --- AKHIR TAMBAHAN ---
+use Filament\Notifications\Notification; 
+use Illuminate\Database\Eloquent\Model; 
+use Illuminate\Support\Facades\Notification as LaravelNotification; 
+use Filament\Support\Exceptions\Halt; 
+use Illuminate\Support\Collection; 
+use Illuminate\Support\Str; 
 
 class ProductResource extends Resource implements HasShieldPermissions
 {
@@ -69,17 +70,44 @@ class ProductResource extends Resource implements HasShieldPermissions
     {
         return $form
             ->schema([
+                Forms\Components\Grid::make(2) 
+                    ->schema([
+                        // Field category_filter hanya untuk filtering, tidak disimpan
+                        Forms\Components\Select::make('category_filter')
+                            ->label('Kategori Produk')
+                            ->options(Category::all()->pluck('name', 'id'))
+                            ->searchable()
+                            ->live() 
+                            ->afterStateUpdated(fn (Set $set) => $set('sub_category_id', null))
+                            ->dehydrated(false) // Tidak disimpan ke database
+                            ->default(function (?Model $record) {
+                                // Saat edit, set category berdasarkan sub_category yang dipilih
+                                return $record?->subCategory?->category_id;
+                            }),
+                        
+                        Forms\Components\Select::make('sub_category_id')
+                            ->label('Sub-Kategori')
+                            ->options(fn (Get $get): Collection => SubCategory::query()
+                                ->where('category_id', $get('category_filter'))
+                                ->pluck('name', 'id'))
+                            ->searchable()
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, Get $get, ?string $state) {
+                                $subCategory = SubCategory::find($state);
+                                $namaAwal = $subCategory?->name ?? '';
+                                $set('name', $namaAwal . ' '); 
+                                $set('sku', $subCategory?->code ?? ''); 
+                            })
+                            ->hidden(fn (Get $get) => !$get('category_filter')), 
+                    ]),
+
                 Forms\Components\TextInput::make('name')
                     ->label('Nama Produk')
                     ->required()
                     ->maxLength(255),
 
-                Forms\Components\Select::make('category_id')
-                    ->label('Kategori Produk')
-                    ->relationship('category', 'name')
-                    ->required(),
-
-                Forms\Components\Select::make('gold_type')
+                    Forms\Components\Select::make('gold_type')
                     ->label('Jenis Emas')
                     ->options([
                         'Emas Tua' => 'Emas Tua',
@@ -87,6 +115,20 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ])
                     ->live()
                     ->afterStateUpdated(fn (Get $get, Set $set) => self::updatePricesAndProfit($get, $set))
+                    ->required(),
+
+                Forms\Components\Select::make('gold_karat')
+                    ->label('Kadar Emas')
+                    ->options([
+                        '8K' => '8 Karat (33.3%)',
+                        '9K' => '9 Karat (37.5%)',
+                        '10K' => '10 Karat (41.7%)',
+                        '14K' => '14 Karat (58.5%)',
+                        '18K' => '18 Karat (75%)',
+                        '22K' => '22 Karat (91.7%)',
+                        '24K' => '24 Karat (99.9%)',
+                    ])
+                    ->searchable()
                     ->required(),
 
                 Forms\Components\TextInput::make('weight_gram')
@@ -119,9 +161,10 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->default(0),
 
                 Forms\Components\TextInput::make('sku')
-                    ->label('SKU')
-                    ->helperText('Jika tidak diisi akan di generate otomatis')
-                    ->maxLength(255),
+                    ->label('SKU (Kode)')
+                    ->helperText('Otomatis terisi dari Sub-Kategori')
+                    ->maxLength(255)
+                    ->readOnly(), 
 
                 Forms\Components\TextInput::make('barcode')
                     ->label('Kode Barcode')
@@ -131,6 +174,7 @@ class ProductResource extends Resource implements HasShieldPermissions
 
                 Forms\Components\Toggle::make('is_active')
                     ->label('Produk Aktif')
+                    ->default(true)
                     ->required(),
 
                 Forms\Components\Textarea::make('description')
@@ -145,8 +189,12 @@ class ProductResource extends Resource implements HasShieldPermissions
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nama Produk')
-                    ->description(fn(Product $record): string => $record->category()->withTrashed()->value('name'))
+                    ->description(fn(Product $record): string => $record->subCategory?->category?->name . ' - ' . $record->subCategory?->name ?? 'Tanpa Kategori')
                     ->searchable(),
+                    Tables\Columns\TextColumn::make('gold_karat')
+                    ->label('Kadar')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\ImageColumn::make('image')
                     ->disk('public')
                     ->label('Gambar')
@@ -171,8 +219,9 @@ class ProductResource extends Resource implements HasShieldPermissions
                 Tables\Columns\TextColumn::make('sku')
                     ->label('SKU')
                     ->searchable(),
-                Tables\Columns\BooleanColumn::make('is_active')
-                    ->label('Produk Aktif'),
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label('Produk Aktif')
+                    ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -184,10 +233,11 @@ class ProductResource extends Resource implements HasShieldPermissions
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
-                Tables\Filters\SelectFilter::make('category_id')
-                    ->label('Kategori')
-                    ->options(Category::all()->pluck('name', 'id'))
-                    ->searchable(),
+                Tables\Filters\SelectFilter::make('sub_category_id')
+                    ->label('Sub-Kategori')
+                    ->relationship('subCategory', 'name')
+                    ->searchable()
+                    ->preload(),
             ])
             ->actions([
                 Tables\Actions\Action::make('Reset Stok')
@@ -196,8 +246,6 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->color('info')
                     ->requiresConfirmation(),
                 Tables\Actions\EditAction::make()->button(),
-
-                // --- DELETE ACTION (SOFT DELETE) DENGAN APPROVAL ---
                 Tables\Actions\DeleteAction::make()
                     ->action(function (Product $record) { 
                         if (auth()->user()->hasRole('super_admin')) {
@@ -205,28 +253,22 @@ class ProductResource extends Resource implements HasShieldPermissions
                             Notification::make()->title('Produk dihapus (sementara).')->success()->send();
                             return;
                         }
-
                         if (auth()->user()->hasRole('admin')) {
                             $approval = Approval::create([
                                 'user_id' => auth()->id(),
                                 'approvable_type' => Product::class,
                                 'approvable_id' => $record->id,
-                                'changes' => ['action' => 'delete'], // Tanda request SOFT DELETE
+                                'changes' => ['action' => 'delete'], 
                                 'status' => 'pending',
                             ]);
-
                             $superAdmins = User::role('super_admin')->get();
                             if ($superAdmins->isNotEmpty()) {
                                 LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
                             }
-
                             Notification::make()->title('Menunggu Approval')->body('Permintaan hapus produk (sementara) telah dikirim ke Superadmin.')->success()->send();
-                            throw new Halt(); // Hentikan aksi soft delete default
+                            throw new Halt(); 
                         }
                     }),
-                // --- AKHIR PERUBAHAN DELETE ACTION ---
-
-                // --- FORCE DELETE ACTION DENGAN APPROVAL ---
                 Tables\Actions\ForceDeleteAction::make()
                     ->action(function (Product $record) { 
                         if (auth()->user()->hasRole('super_admin')) {
@@ -234,7 +276,6 @@ class ProductResource extends Resource implements HasShieldPermissions
                             Notification::make()->title('Produk dihapus permanen.')->success()->send();
                             return;
                         }
-
                         if (auth()->user()->hasRole('admin')) {
                             $approval = Approval::create([
                                 'user_id' => auth()->id(),
@@ -243,18 +284,14 @@ class ProductResource extends Resource implements HasShieldPermissions
                                 'changes' => ['action' => 'force_delete'], 
                                 'status' => 'pending',
                             ]);
-
                             $superAdmins = User::role('super_admin')->get();
                             if ($superAdmins->isNotEmpty()) {
                                 LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
                             }
-
                             Notification::make()->title('Menunggu Approval')->body('Permintaan hapus produk permanen telah dikirim ke Superadmin.')->success()->send();
-                            throw new Halt(); // Hentikan aksi force delete default
+                            throw new Halt(); 
                         }
                     }),
-                // --- AKHIR PERUBAHAN FORCE DELETE ACTION ---
-                    
                 Tables\Actions\RestoreAction::make(),
             ])
             ->bulkActions([
