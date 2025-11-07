@@ -13,13 +13,19 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('category_id')->constrained()->onDelete('cascade');
+  
+            $table->foreignId('sub_category_id')
+                  ->constrained('sub_categories') 
+                  ->onDelete('cascade');
+
             $table->string('name');
             $table->integer('stock')->nullable();
-            $table->integer('cost_price');
-            $table->integer('price');
+            
+            $table->decimal('cost_price', 15, 2)->default(0);
+            $table->decimal('price', 15, 2)->default(0);
+            
             $table->string('image')->nullable();
-            $table->string('sku')->nullable();
+            $table->string('sku')->nullable()->unique(); 
             $table->string('barcode')->nullable();
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
