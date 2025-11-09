@@ -14,7 +14,7 @@ use App\Models\User;
 use App\Notifications\TransaksiBaruDibuat;
 use App\Services\DirectPrintService;
 use Filament\Notifications\Notification;
-use Illuminate\Database\Eloquent\Builder; // <-- IMPORT INI
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Notification as LaravelNotification;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -83,15 +83,14 @@ class Pos extends Component
     public function render()
     {
         return view('livewire.pos', [
-            'products' => Product::where('stock', '>', 0)
+            'products' => Product::with(['subCategory.category']) // <-- PERBAIKAN QUERY DI SINI
+                ->where('stock', '>', 0)
                 ->where('is_active', 1)
-                // V V V INI ADALAH PERBAIKAN QUERY V V V
                 ->when($this->selectedCategory, function (Builder $query) {
                     $query->whereHas('subCategory', function (Builder $subQuery) {
                         $subQuery->where('category_id', $this->selectedCategory);
                     });
                 })
-                // ^ ^ ^ AKHIR DARI PERBAIKAN QUERY ^ ^ ^
                 ->where(function ($query) {
                     $query->where('name', 'LIKE', '%' . $this->search . '%')
                         ->orWhere('sku', 'LIKE', '%' . $this->search . '%');
