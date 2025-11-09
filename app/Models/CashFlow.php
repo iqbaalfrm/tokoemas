@@ -9,8 +9,17 @@ class CashFlow extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['date', 'type', 'source', 'amount', 'notes'];
-
-    
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'date', 
+        'type', 
+        'source', 
+        'amount', 
+        'notes',
+        'inventory_id' 
+    ];
 }
-

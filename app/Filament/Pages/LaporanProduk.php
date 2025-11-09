@@ -13,23 +13,18 @@ use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables;
 use Filament\Tables\Actions\Action;
-use App\Exports\LaporanProdukExport; 
-use Maatwebsite\Excel\Facades\Excel; 
+use App\Exports\LaporanProdukExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class LaporanProduk extends Page implements HasTable
 {
     use InteractsWithTable;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-chart-bar';
-
     protected static string $view = 'filament.pages.laporan-produk';
-
     protected static ?string $navigationLabel = 'Laporan Produk';
-
     protected static ?string $title = 'Laporan Produk';
-
     protected static ?string $navigationGroup = 'Menejemen keuangan';
-
     protected static ?int $navigationSort = 6;
 
     public static function canAccess(): bool
@@ -41,7 +36,8 @@ class LaporanProduk extends Page implements HasTable
     {
         return $table
             ->query(
-                Product::query()->with('category')->select('products.*')
+              
+                Product::query()->with(['subCategory.category'])
             )
             ->columns([
                 TextColumn::make('name')
@@ -58,12 +54,15 @@ class LaporanProduk extends Page implements HasTable
                     ->suffix(' g')
                     ->numeric(3),
             ])
-            ->defaultGroup('category.name')
+            
+ 
+            ->defaultGroup('subCategory.category.name')
             
             ->groups([
-                Group::make('category.name')
+
+                Group::make('subCategory.category.name')
                     ->label('Kategori')
-                    ->getTitleFromRecordUsing(fn ($record): ?string => $record->category?->name ?? 'Tanpa Kategori'),
+        
             ])
             
             ->headerActions([
@@ -72,7 +71,7 @@ class LaporanProduk extends Page implements HasTable
                     ->color('success') 
                     ->icon('heroicon-o-document-arrow-down') 
                     ->action(function () {
- 
+            
                         $query = $this->getFilteredTableQuery();
                         
                         $fileName = 'laporan-produk-' . now()->format('Y-m-d') . '.xlsx';
@@ -81,7 +80,7 @@ class LaporanProduk extends Page implements HasTable
                             new LaporanProdukExport($query), 
                             $fileName
                         );
-                      
+                    
                     })
             ])
     

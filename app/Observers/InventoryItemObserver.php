@@ -2,59 +2,58 @@
 
 namespace App\Observers;
 
+use App\Models\Inventory;
 use App\Models\InventoryItem;
-use Illuminate\Support\Facades\Log;
+use App\Models\CashFlow;
+use Illuminate\Support\Facades\DB;
 
 class InventoryItemObserver
 {
-    public function created(InventoryItem $item)
+    public function created(InventoryItem $inventoryItem): void
     {
-        $type = $item->inventory->type;
-        $source = $item->inventory->source;
-
-        if ($type === 'in') {
-            // Tambah stok
-            $item->product->increment('stock', $item->quantity);
-        } elseif ($type === 'out') {
-            // Kurangi stok
-            $item->product->decrement('stock', $item->quantity);
-        } elseif ($type === 'adjustment') {
-            // Penyesuaian langsung (stock opname)
-            $item->product->update(['stock' => $item->quantity]);
-        }
+        $this->recalculateInventoryCost($inventoryItem->inventory);
     }
 
-    public function updated(InventoryItem $item)
+    public function updated(InventoryItem $inventoryItem): void
     {
-        $type = $item->inventory->type;
-        $originalQty = $item->getOriginal('quantity');
-        $newQty = $item->quantity;
-
-        $product = $item->product;
-
-        if ($type === 'in') {
-            $product->increment('stock', $newQty - $originalQty);
-        } elseif ($type === 'out') {
-            $product->decrement('stock', $newQty - $originalQty);
-        } elseif ($type === 'adjustment') {
-            $product->update(['stock' => $newQty]);
-        }
+        $this->recalculateInventoryCost($inventoryItem->inventory);
     }
 
-    public function deleted(InventoryItem $item)
+    public function deleted(InventoryItem $inventoryItem): void
     {
-        $type = $item->inventory->type;
-
-        if ($type === 'in') {
-            $item->product->decrement('stock', $item->quantity);
-        } elseif ($type === 'out') {
-            $item->product->increment('stock', $item->quantity);
-        } elseif ($type === 'adjustment') {
-            // Tidak bisa dikembalikan otomatis karena tidak tahu stok sebelumnya
-            // Bisa log saja
-            Log::warning("Item adjustment dihapus: Tidak dapat mengembalikan stok secara akurat.");
-        }
+        $this->recalculateInventoryCost($inventoryItem->inventory);
     }
 
-   
+    private function recalculateInventoryCost(?Inventory $inventory): void
+    {
+        if (!$inventory) {
+            return;
+        }
+        
+        $totalCost = $inventory->inventoryItems()->sum(DB::raw('cost_price * quantity'));
+
+        $inventory->total = $totalCost;
+        $inventory->total_cost = $totalCost;
+        $inventory->saveQuietly();
+
+        if ($inventory->type === 'in' && $inventory->source === 'purchase_stock') {
+            
+            if ($totalCost > 0) {
+                CashFlow::updateOrCreate(
+                    [
+                        'inventory_id' => $inventory->id
+                    ],
+                    [
+                        'date' => $inventory->updated_at ?? now(),
+                        'type' => 'expense',
+                        'source' => 'purchase_stock',
+                        'amount' => $totalCost,
+                        'notes' => 'Otomatis dari stok Inventory: ' . $inventory->reference_number,
+                    ]
+                );
+            } else {
+                CashFlow::where('inventory_id', $inventory->id)->delete();
+            }
+        }
+    }
 }

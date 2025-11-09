@@ -139,14 +139,12 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->afterStateUpdated(fn (Get $get, Set $set) => self::updatePricesAndProfit($get, $set))
                     ->required(),
 
-                // V V V FIELD INI SUDAH DITAMBAHKAN KEMBALI V V V
                 Forms\Components\TextInput::make('cost_price')
                     ->label('Harga Modal')
                     ->prefix('Rp')
                     ->numeric()
                     ->required()
                     ->minValue(0),
-                // ^ ^ ^ BATAS FIELD YANG DITAMBAHKAN ^ ^ ^
 
                 Forms\Components\TextInput::make('selling_price')
                     ->label('Harga Jual Otomatis')
@@ -335,20 +333,20 @@ class ProductResource extends Resource implements HasShieldPermissions
         $goldType = $get('gold_type');
         $weight = floatval($get('weight_gram'));
 
-        if (empty($goldType) || empty($weight)) {
+        if (empty($goldType) || empty($weight) || $weight <= 0) {
             $set('selling_price', 0);
             return;
         }
 
-        $goldPriceToday = GoldPrice::where('jenis_emas', $goldType)
-            ->whereDate('tanggal', Carbon::today())
+        $goldPriceRecord = GoldPrice::where('jenis_emas', $goldType)
+            ->orderBy('tanggal', 'desc')
             ->first();
 
-        $pricePerGram = $goldPriceToday?->harga_per_gram ?? 0;
+        $pricePerGram = $goldPriceRecord?->harga_per_gram ?? 0;
 
         $sellingPrice = $weight * $pricePerGram;
 
-        $set('selling_price', $sellingPrice);
+        $set('selling_price', round($sellingPrice));
     }
 
     public static function getRelations(): array
