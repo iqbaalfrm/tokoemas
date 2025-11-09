@@ -12,6 +12,7 @@ use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use App\Services\InventoryLabelService;
 use Filament\Forms\Components\Repeater;
+use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\InventoryResource\Pages;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 
@@ -29,7 +30,6 @@ class InventoryResource extends Resource implements HasShieldPermissions
 
     protected static ?string $model = Inventory::class;
 
-
     protected static ?string $navigationIcon = 'heroicon-o-squares-plus';
 
     protected static ?string $navigationLabel = 'Menejemen Inventori';
@@ -42,7 +42,6 @@ class InventoryResource extends Resource implements HasShieldPermissions
     {
         return static::getModel()::count();
     }
-
 
     public static function form(Form $form): Form
     {
@@ -64,7 +63,7 @@ class InventoryResource extends Resource implements HasShieldPermissions
                         Forms\Components\Select::make('source')
                             ->label('Sumber')
                             ->required()
-                            ->options(fn(Get $get) => InventoryLabelService::getSourceOptionsByType($get('type'))),
+                            ->options(fn (Get $get) => InventoryLabelService::getSourceOptionsByType($get('type'))),
                     ])->columns(3),
                 Forms\Components\Section::make('Pemilihan Produk')->schema([
                     self::getItemsRepeater(),
@@ -82,30 +81,32 @@ class InventoryResource extends Resource implements HasShieldPermissions
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('reference_number')
-                ->label('No.Referensi')
-                ->weight('semibold')
-                ->copyable(),
+                    ->label('No.Referensi')
+                    ->weight('semibold')
+                    ->copyable(),
                 Tables\Columns\TextColumn::make('type')
-                ->label('Tipe')
-                ->formatStateUsing(fn (string $state): string => match ($state) {
+                    ->label('Tipe')
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'in' => 'Masuk',
                         'out' => 'Keluar',
                         'adjustment' => 'Penyesuaian',
+                        default => $state
                     })
                     ->icon(fn (string $state): string => match ($state) {
                         'in' => 'heroicon-o-arrow-down-circle',
                         'out' => 'heroicon-o-arrow-up-circle',
                         'adjustment' => 'heroicon-o-arrow-path-rounded-square',
-
+                        default => ''
                     })
                     ->color(fn (string $state): string => match ($state) {
                         'in' => 'success',
                         'out' => 'danger',
                         'adjustment' => 'info',
+                        default => 'gray'
                     }),
                 Tables\Columns\TextColumn::make('source')
-                ->label('Sumber')
-                ->formatStateUsing(fn($state, $record) => InventoryLabelService::getSourceLabel($record->type,$state)),
+                    ->label('Sumber')
+                    ->formatStateUsing(fn ($state, $record) => InventoryLabelService::getSourceLabel($record->type, $state)),
                 Tables\Columns\TextColumn::make('notes')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
@@ -140,7 +141,7 @@ class InventoryResource extends Resource implements HasShieldPermissions
     public static function getItemsRepeater(): Repeater
     {
         return Repeater::make('inventoryItems')
-            ->relationship()
+            ->relationship(fn (Builder $query) => $query->with('product')) // <-- QUERY DIPERCEPAT DI SINI
             ->live()
             ->columns([
                 'md' => 8,
@@ -149,10 +150,10 @@ class InventoryResource extends Resource implements HasShieldPermissions
                 Forms\Components\Select::make('product_id')
                     ->label('Produk')
                     ->required()
-                    ->searchable(['name','sku'])
+                    ->searchable(['name', 'sku'])
                     ->searchPrompt('Cari nama atau sku produk')
                     ->preload()
-                    ->relationship('product' , 'name')
+                    ->relationship('product', 'name')
                     ->getOptionLabelFromRecordUsing(fn (Product $record) => "{$record->name}-({$record->stock})-{$record->sku}")
                     ->columnSpan([
                         'md' => 4

@@ -6,7 +6,7 @@ use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Category;
 use App\Models\GoldPrice;
 use App\Models\Product;
-use App\Models\SubCategory; 
+use App\Models\SubCategory;
 use Barryvdh\DomPDF\Facade\Pdf;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Carbon\Carbon;
@@ -23,12 +23,12 @@ use Milon\Barcode\DNS1D;
 use App\Models\Approval;
 use App\Models\User;
 use App\Notifications\ApprovalDiminta;
-use Filament\Notifications\Notification; 
-use Illuminate\Database\Eloquent\Model; 
-use Illuminate\Support\Facades\Notification as LaravelNotification; 
-use Filament\Support\Exceptions\Halt; 
-use Illuminate\Support\Collection; 
-use Illuminate\Support\Str; 
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Notification as LaravelNotification;
+use Filament\Support\Exceptions\Halt;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class ProductResource extends Resource implements HasShieldPermissions
 {
@@ -61,30 +61,30 @@ class ProductResource extends Resource implements HasShieldPermissions
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->withoutGlobalScopes([
-            SoftDeletingScope::class,
-        ])->orderBy('created_at', 'desc');
+        return parent::getEloquentQuery()
+            ->with(['subCategory.category'])
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ])->orderBy('created_at', 'desc');
     }
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Grid::make(2) 
+                Forms\Components\Grid::make(2)
                     ->schema([
-                        // Field category_filter hanya untuk filtering, tidak disimpan
                         Forms\Components\Select::make('category_filter')
                             ->label('Kategori Produk')
                             ->options(Category::all()->pluck('name', 'id'))
                             ->searchable()
-                            ->live() 
+                            ->live()
                             ->afterStateUpdated(fn (Set $set) => $set('sub_category_id', null))
-                            ->dehydrated(false) // Tidak disimpan ke database
+                            ->dehydrated(false)
                             ->default(function (?Model $record) {
-                                // Saat edit, set category berdasarkan sub_category yang dipilih
                                 return $record?->subCategory?->category_id;
                             }),
-                        
+
                         Forms\Components\Select::make('sub_category_id')
                             ->label('Sub-Kategori')
                             ->options(fn (Get $get): Collection => SubCategory::query()
@@ -96,10 +96,10 @@ class ProductResource extends Resource implements HasShieldPermissions
                             ->afterStateUpdated(function (Set $set, Get $get, ?string $state) {
                                 $subCategory = SubCategory::find($state);
                                 $namaAwal = $subCategory?->name ?? '';
-                                $set('name', $namaAwal . ' '); 
-                                $set('sku', $subCategory?->code ?? ''); 
+                                $set('name', $namaAwal . ' ');
+                                $set('sku', $subCategory?->code ?? '');
                             })
-                            ->hidden(fn (Get $get) => !$get('category_filter')), 
+                            ->hidden(fn (Get $get) => !$get('category_filter')),
                     ]),
 
                 Forms\Components\TextInput::make('name')
@@ -107,7 +107,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->required()
                     ->maxLength(255),
 
-                    Forms\Components\Select::make('gold_type')
+                Forms\Components\Select::make('gold_type')
                     ->label('Jenis Emas')
                     ->options([
                         'Emas Tua' => 'Emas Tua',
@@ -164,7 +164,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->label('SKU (Kode)')
                     ->helperText('Otomatis terisi dari Sub-Kategori')
                     ->maxLength(255)
-                    ->readOnly(), 
+                    ->readOnly(),
 
                 Forms\Components\TextInput::make('barcode')
                     ->label('Kode Barcode')
@@ -189,9 +189,9 @@ class ProductResource extends Resource implements HasShieldPermissions
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nama Produk')
-                    ->description(fn(Product $record): string => $record->subCategory?->category?->name . ' - ' . $record->subCategory?->name ?? 'Tanpa Kategori')
+                    ->description(fn (Product $record): string => $record->subCategory?->category?->name . ' - ' . $record->subCategory?->name ?? 'Tanpa Kategori')
                     ->searchable(),
-                    Tables\Columns\TextColumn::make('gold_karat')
+                Tables\Columns\TextColumn::make('gold_karat')
                     ->label('Kadar')
                     ->searchable()
                     ->sortable(),
@@ -208,7 +208,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->prefix('Rp ')
                     ->numeric()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true), 
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('selling_price')
                     ->label('Harga Saat Ini')
                     ->money('IDR', true)
@@ -241,13 +241,13 @@ class ProductResource extends Resource implements HasShieldPermissions
             ])
             ->actions([
                 Tables\Actions\Action::make('Reset Stok')
-                    ->action(fn(Product $record) => $record->update(['stock' => 0]))
+                    ->action(fn (Product $record) => $record->update(['stock' => 0]))
                     ->button()
                     ->color('info')
                     ->requiresConfirmation(),
                 Tables\Actions\EditAction::make()->button(),
                 Tables\Actions\DeleteAction::make()
-                    ->action(function (Product $record) { 
+                    ->action(function (Product $record) {
                         if (auth()->user()->hasRole('super_admin')) {
                             $record->delete();
                             Notification::make()->title('Produk dihapus (sementara).')->success()->send();
@@ -258,7 +258,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                                 'user_id' => auth()->id(),
                                 'approvable_type' => Product::class,
                                 'approvable_id' => $record->id,
-                                'changes' => ['action' => 'delete'], 
+                                'changes' => ['action' => 'delete'],
                                 'status' => 'pending',
                             ]);
                             $superAdmins = User::role('super_admin')->get();
@@ -266,11 +266,11 @@ class ProductResource extends Resource implements HasShieldPermissions
                                 LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
                             }
                             Notification::make()->title('Menunggu Approval')->body('Permintaan hapus produk (sementara) telah dikirim ke Superadmin.')->success()->send();
-                            throw new Halt(); 
+                            throw new Halt();
                         }
                     }),
                 Tables\Actions\ForceDeleteAction::make()
-                    ->action(function (Product $record) { 
+                    ->action(function (Product $record) {
                         if (auth()->user()->hasRole('super_admin')) {
                             $record->forceDelete();
                             Notification::make()->title('Produk dihapus permanen.')->success()->send();
@@ -281,7 +281,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                                 'user_id' => auth()->id(),
                                 'approvable_type' => Product::class,
                                 'approvable_id' => $record->id,
-                                'changes' => ['action' => 'force_delete'], 
+                                'changes' => ['action' => 'force_delete'],
                                 'status' => 'pending',
                             ]);
                             $superAdmins = User::role('super_admin')->get();
@@ -289,7 +289,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                                 LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
                             }
                             Notification::make()->title('Menunggu Approval')->body('Permintaan hapus produk permanen telah dikirim ke Superadmin.')->success()->send();
-                            throw new Halt(); 
+                            throw new Halt();
                         }
                     }),
                 Tables\Actions\RestoreAction::make(),
@@ -297,17 +297,17 @@ class ProductResource extends Resource implements HasShieldPermissions
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(), 
+                    Tables\Actions\ForceDeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                 ]),
                 Tables\Actions\BulkAction::make('printBarcodes')
                     ->label('Cetak Barcode')
                     ->button()
                     ->icon('heroicon-o-printer')
-                    ->action(fn($records) => self::generateBulkBarcode($records))
+                    ->action(fn ($records) => self::generateBulkBarcode($records))
                     ->color('success'),
                 Tables\Actions\BulkAction::make('Reset Stok')
-                    ->action(fn($records) => $records->each->update(['stock' => 0]))
+                    ->action(fn ($records) => $records->each->update(['stock' => 0]))
                     ->button()
                     ->color('info')
                     ->requiresConfirmation(),
@@ -316,7 +316,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                 Tables\Actions\Action::make('printBarcodes')
                     ->label('Cetak Barcode')
                     ->icon('heroicon-o-printer')
-                    ->action(fn() => self::generateBulkBarcode(Product::all()))
+                    ->action(fn () => self::generateBulkBarcode(Product::all()))
                     ->color('success'),
             ]);
     }
@@ -332,8 +332,8 @@ class ProductResource extends Resource implements HasShieldPermissions
         }
 
         $goldPriceToday = GoldPrice::where('jenis_emas', $goldType)
-                                    ->whereDate('tanggal', Carbon::today())
-                                    ->first();
+            ->whereDate('tanggal', Carbon::today())
+            ->first();
 
         $pricePerGram = $goldPriceToday?->harga_per_gram ?? 0;
 
@@ -370,11 +370,11 @@ class ProductResource extends Resource implements HasShieldPermissions
         }
 
         if (empty($barcodes)) {
-             Notification::make()->title('Tidak ada barcode untuk dicetak')->warning()->send();
-             return;
+            Notification::make()->title('Tidak ada barcode untuk dicetak')->warning()->send();
+            return;
         }
 
         $pdf = Pdf::loadView('pdf.barcodes.barcode', compact('barcodes'))->setPaper('a4', 'portrait');
-        return response()->streamDownload(fn() => print($pdf->output()), 'barcodes.pdf');
+        return response()->streamDownload(fn () => print($pdf->output()), 'barcodes.pdf');
     }
 }
