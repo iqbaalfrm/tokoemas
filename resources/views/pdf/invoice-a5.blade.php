@@ -8,9 +8,8 @@
         body { font-family: 'Poppins', sans-serif; font-size: 11px; color: #333; }
         .container { width: 100%; border: 1px solid #a00; border-radius: 5px; padding: 10px; }
         
-        /* --- Header --- */
         .header { 
-            overflow: auto; /* Bertindak sebagai "clearfix" untuk float */
+            overflow: auto;
         }
         .left {
             float: left;
@@ -29,7 +28,6 @@
         .toko-info b { color: #a00; }
         .barcode { margin-top: 3px; text-align: right; }
 
-        /* --- Konten --- */
         .section-title { 
             font-weight: bold; 
             color: #a00; 
@@ -59,34 +57,30 @@
             border-radius: 5px;
         }
 
-        /* --- Total --- */
         .harga { 
             font-size: 13px; 
             font-weight: bold; 
             color: #a00; 
         }
 
-        /* --- Style untuk Footer & TTD Gabungan --- */
         .footer-ttd-table {
             width: 100%;
-            margin-top: 10px; /* Jarak dari 'Terbilang' */
+            margin-top: 10px;
             border-collapse: collapse;
         }
 
         .footer-content {
-            /* Kolom kiri untuk 'Perhatian' */
             width: 70%;
             font-size: 9px; 
             color: #555; 
             line-height: 1.3;
-            vertical-align: top; /* Penting: Rata atas */
+            vertical-align: top;
         }
 
         .ttd-content {
-            /* Kolom kanan untuk 'Kasir' */
             width: 30%;
-            text-align: center; /* Posisi TTD di tengah kolom ini */
-            vertical-align: top; /* Penting: Rata atas */
+            text-align: center;
+            vertical-align: top;
         }
         
         .ttd-content p {
@@ -94,18 +88,17 @@
         }
 
         .ttd-name {
-            padding-top: 35px; /* Spasi untuk Tanda Tangan */
+            padding-top: 35px;
         }
         
     </style>
 </head>
 <body>
 <div class="container">
-    {{-- Header --}}
     <div class="header">
         <div class="left">
             <div class="logo">
-          <img src="{{ public_path('images/logo1.jpg') }}" alt="Logo" style="width: 60px; height: auto;">
+                <img src="{{ public_path('images/logo1.jpg') }}" alt="Logo" style="width: 60px; height: auto;">
             </div>
             <div class="toko-info">
                 <b>Toko Mas Hartono Wiyono</b><br>
@@ -118,17 +111,16 @@
 
         <div class="right-info">
             <b>Wates, {{ now()->format('d F Y') }}</b><br>
-          Nama: {{ $transaction->member->nama ?? $transaction->name ?? '-' }}<br>
-Alamat: {{ $transaction->member->alamat ?? $transaction->address ?? '-' }}<br>
-No. Telepon: {{ $transaction->member->no_hp ?? $transaction->phone ?? '-' }}<br>
-<b>No. Trans: {{ $transaction->transaction_number }}</b>
+            Nama: {{ $transaction->member->nama ?? $transaction->name ?? '-' }}<br>
+            Alamat: {{ $transaction->member->alamat ?? $transaction->address ?? '-' }}<br>
+            No. Telepon: {{ $transaction->member->no_hp ?? $transaction->phone ?? '-' }}<br>
+            <b>No. Trans: {{ $transaction->transaction_number }}</b>
             <div class="barcode">
                 <img src="data:image/png;base64,{{ DNS1D::getBarcodePNG($transaction->transaction_number, 'C128', 1.2, 40, [0,0,0], false) }}" alt="barcode" />
             </div>
         </div>
     </div>
 
-    {{-- Detail Produk --}}
     <div class="section-title">Detail Barang</div>
     <table class="table-barang">
         <thead>
@@ -152,24 +144,27 @@ No. Telepon: {{ $transaction->member->no_hp ?? $transaction->phone ?? '-' }}<br>
                         <img src="{{ public_path('images/default-product.png') }}" class="foto-produk">
                     @endif
                 </td>
-                <td>{{ strtoupper($item->product->category->name ?? '-') }}</td>
+                
+                <td>{{ strtoupper($item->product->subCategory->category->name ?? '-') }}</td>
+                
                 <td>{{ strtoupper($item->product->name) }}</td>
-                <td>{{ $item->product->gold_type ?? '8K' }}</td>
-                <td>{{ $item->product->kode_barang ?? '-' }}</td>
-               <td>{{ number_format($item->weight_gram ?? 0, 3) }} Gr</td>
+
+                <td>{{ $item->product->gold_karat ?? '8K' }}</td>
+                
+                <td>{{ $item->product->sku ?? '-' }}</td>
+                
+                <td>{{ number_format($item->weight_gram ?? 0, 3) }} Gr</td>
                 <td>Rp {{ number_format($item->price, 0, ',', '.') }}</td>
             </tr>
         @endforeach
         </tbody>
     </table>
 
-    {{-- Total --}}
     <p style="text-align:right; margin-top:10px;">
         Total: <span class="harga">Rp {{ number_format($transaction->total, 0, ',', '.') }}</span>
     </p>
     <p><b>Terbilang:</b> {{ ucwords(terbilang($transaction->total)) }} Rupiah</p>
 
-    {{-- Catatan & TTD (Digabung) --}}
     <table class="footer-ttd-table">
         <tr>
             <td class="footer-content">
