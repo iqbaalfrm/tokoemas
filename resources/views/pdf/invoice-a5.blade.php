@@ -129,7 +129,6 @@
             <th>Jenis</th>
             <th>Model</th>
             <th>Kadar</th>
-            <th>Kode</th>
             <th>Berat</th>
             <th>Harga</th>
         </tr>
@@ -151,7 +150,6 @@
 
                 <td>{{ $item->product->gold_karat ?? '8K' }}</td>
                 
-                <td>{{ $item->product->sku ?? '-' }}</td>
                 
                 <td>{{ number_format($item->weight_gram ?? 0, 3) }} Gr</td>
                 <td>Rp {{ number_format($item->price, 0, ',', '.') }}</td>
