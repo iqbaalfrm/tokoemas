@@ -9,11 +9,15 @@ use App\Models\Transaction;
 class TransactionController extends Controller
 {
 
-public function printInvoice($id)
-{
-    $transaction = Transaction::with(['items.product.category', 'member'])->findOrFail($id);
-    $pdf = Pdf::loadView('pdf.invoice-a5', compact('transaction'));
-    return $pdf->stream('invoice-'.$transaction->transaction_number.'.pdf');
-}
+    public function printInvoice($id)
+    {
 
+        $transaction = Transaction::with([
+            'items.product.subCategory.category', 
+            'member'
+        ])->findOrFail($id);
+        
+        $pdf = Pdf::loadView('pdf.invoice-a5', compact('transaction'));
+        return $pdf->stream('invoice-' . $transaction->transaction_number . '.pdf');
+    }
 }
