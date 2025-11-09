@@ -9,5 +9,4 @@ Route::get('/clear-pos-cart', function () {
     return 'Keranjang POS sudah dibersihkan. Silakan kembali ke halaman POS.';
 });
 
-
-Route::get('/invoice/{id}/pdf', [TransactionController::class, 'printInvoice']);
+Route::get('/invoice/{id}/pdf', [TransactionController::class, 'printInvoice'])->name('invoice.pdf');

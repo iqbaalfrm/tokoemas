@@ -66,7 +66,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with('paymentMethod') 
+            ->with('paymentMethod')
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ])->orderBy('created_at', 'desc');
@@ -204,7 +204,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->label('Cetak PDF')
                     ->icon('heroicon-o-printer')
                     ->color('amber')
-                    ->url(fn (Transaction $record): string => route('invoice.pdf', ['id' => $record->id])) // <-- URL DIRAPIKAN
+                    ->url(fn (Transaction $record): string => route('invoice.pdf', ['id' => $record->id]))
                     ->openUrlInNewTab(),
 
                 Tables\Actions\ActionGroup::make([
@@ -254,7 +254,9 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->button(),
                 Tables\Actions\RestoreBulkAction::make(),
             ])
-            ->headerActions([]);
+            ->headerActions([
+                Tables\Actions\CreateAction::make(), // <-- TAMBAHKAN INI
+            ]);
     }
 
     public static function getItemsRepeater(): Repeater
@@ -283,9 +285,9 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
                         $product = Product::withTrashed()->find($state);
                         $set('cost_price', $product->cost_price ?? 0);
-                        $set('price', $product->price ?? 0); 
+                        $set('price', $product->selling_price ?? 0); // Diubah ke selling_price
                         $quantity = $get('quantity') ?? 1;
-                        $set('total_profit', (($product->price ?? 0) - ($product->cost_price ?? 0)) * $quantity);
+                        $set('total_profit', (($product->selling_price ?? 0) - ($product->cost_price ?? 0)) * $quantity);
                         self::updateTotalPrice($get, $set);
                     })
                     ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
@@ -299,7 +301,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
                         $id = $get('product_id');
                         $product = Product::withTrashed()->find($id);
                         $quantity = (int) ($state ?? 0);
-                        $price = (int) ($product->price ?? 0); // Pastikan ini 'price' atau 'selling_price'
+                        $price = (int) ($product->selling_price ?? 0); // Diubah ke selling_price
                         $costPrice = (int) ($product->cost_price ?? 0);
                         $set('total_profit', ($price - $costPrice) * $quantity);
                         self::updateTotalPrice($get, $set);
@@ -363,8 +365,9 @@ class TransactionResource extends Resource implements HasShieldPermissions
     {
         return [
             'index' => Pages\ListTransactions::route('/'),
+            'create' => Pages\CreateTransaction::route('/create'), // <-- TAMBAHKAN INI
             'view' => Pages\ViewTransaction::route('/{record}'),
-            'edit' => Pages\EditTransaction::route('edit/{record}'),
+            'edit' => Pages\EditTransaction::route('/{record}/edit'), // <-- UBAH INI
         ];
     }
 
@@ -375,8 +378,9 @@ class TransactionResource extends Resource implements HasShieldPermissions
 
         $ids = $selectedProducts->pluck('product_id')->all();
         $products = Product::withTrashed()->whereIn('id', $ids)->get();
-
-        $prices = $products->pluck('price', 'id'); 
+        
+        // Diubah ke selling_price
+        $prices = $products->pluck('selling_price', 'id'); 
         $total = $selectedProducts->reduce(function ($total, $item) use ($prices) {
             $productId = $item['product_id'];
             $price = $prices[$productId] ?? 0;

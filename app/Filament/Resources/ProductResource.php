@@ -252,7 +252,6 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->button()
                     ->color('info')
                     ->requiresConfirmation(),
-                Tables\Actions\EditAction::make()->button(),
                 Tables\Actions\DeleteAction::make()
                     ->action(function (Product $record) {
                         if (auth()->user()->hasRole('super_admin')) {
@@ -320,6 +319,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->requiresConfirmation(),
             ])
             ->headerActions([
+                Tables\Actions\CreateAction::make(),
                 Tables\Actions\Action::make('printBarcodes')
                     ->label('Cetak Barcode')
                     ->icon('heroicon-o-printer')
@@ -358,6 +358,8 @@ class ProductResource extends Resource implements HasShieldPermissions
     {
         return [
             'index' => Pages\ListProducts::route('/'),
+            'create' => Pages\CreateProduct::route('/create'),
+            'edit' => Pages\EditProduct::route('/{record}/edit'),
         ];
     }
 

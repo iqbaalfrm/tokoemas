@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Filament\Resources\TransactionResource\Pages;
+namespace App\Filament\Resources\ProductResource\Pages;
 
-use App\Filament\Resources\TransactionResource;
+use App\Filament\Resources\ProductResource;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Exceptions\Halt;
 use Filament\Notifications\Notification;
 use App\Models\Approval;
 use App\Models\User;
-use App\Models\Transaction;
+use App\Models\Product;
 use App\Notifications\ApprovalDiminta;
 use Illuminate\Support\Facades\Notification as LaravelNotification;
 
-class CreateTransaction extends CreateRecord
+class CreateProduct extends CreateRecord
 {
-    protected static string $resource = TransactionResource::class;
+    protected static string $resource = ProductResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
@@ -26,7 +26,7 @@ class CreateTransaction extends CreateRecord
             
             $approval = Approval::create([
                 'user_id' => auth()->id(),
-                'approvable_type' => Transaction::class,
+                'approvable_type' => Product::class,
                 'approvable_id' => null,
                 'action_type' => 'create',
                 'changes' => $data,
@@ -40,7 +40,7 @@ class CreateTransaction extends CreateRecord
 
             Notification::make()
                 ->title('Menunggu Approval')
-                ->body('Permintaan pembuatan transaksi baru telah dikirim ke Superadmin.')
+                ->body('Permintaan pembuatan produk baru telah dikirim ke Superadmin.')
                 ->success()
                 ->send();
 
