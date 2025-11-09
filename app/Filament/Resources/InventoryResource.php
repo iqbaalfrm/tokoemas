@@ -141,7 +141,7 @@ class InventoryResource extends Resource implements HasShieldPermissions
     public static function getItemsRepeater(): Repeater
     {
         return Repeater::make('inventoryItems')
-            ->relationship(fn (Builder $query) => $query->with('product')) // <-- QUERY DIPERCEPAT DI SINI
+            ->relationship('inventoryItems') // <-- INI PERBAIKAN UNTUK TYPEERROR
             ->live()
             ->columns([
                 'md' => 8,
@@ -190,6 +190,7 @@ class InventoryResource extends Resource implements HasShieldPermissions
     {
         return [
             'index' => Pages\ListInventories::route('/'),
+            'edit' => Pages\EditInventory::route('/{record}/edit'), // <-- INI TAMBAHAN
         ];
     }
 }
