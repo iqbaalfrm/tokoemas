@@ -6,6 +6,7 @@ use Filament\Forms;
 use Filament\Tables;
 use App\Models\Product;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Forms\Form;
 use App\Models\Inventory;
 use Filament\Tables\Table;
@@ -29,13 +30,9 @@ class InventoryResource extends Resource implements HasShieldPermissions
     }
 
     protected static ?string $model = Inventory::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-squares-plus';
-
     protected static ?string $navigationLabel = 'Menejemen Inventori';
-
     protected static ?int $navigationSort = 3;
-
     protected static ?string $navigationGroup = 'Menejemen Produk';
 
     public static function getNavigationBadge(): ?string
@@ -65,9 +62,21 @@ class InventoryResource extends Resource implements HasShieldPermissions
                             ->required()
                             ->options(fn (Get $get) => InventoryLabelService::getSourceOptionsByType($get('type'))),
                     ])->columns(3),
+                
                 Forms\Components\Section::make('Pemilihan Produk')->schema([
                     self::getItemsRepeater(),
                 ]),
+
+                Forms\Components\Section::make('Total')
+                    ->schema([
+                        Forms\Components\TextInput::make('total_modal')
+                            ->label('Total Modal')
+                            ->prefix('Rp')
+                            ->numeric()
+                            ->readOnly()
+                            ->dehydrated(false), // Jangan simpan ini di tabel 'inventories'
+                    ]),
+
                 Forms\Components\Section::make('Catatan')->schema([
                     Forms\Components\Textarea::make('notes')
                         ->maxLength(255)
@@ -141,11 +150,12 @@ class InventoryResource extends Resource implements HasShieldPermissions
     public static function getItemsRepeater(): Repeater
     {
         return Repeater::make('inventoryItems')
-            ->relationship('inventoryItems') // <-- INI PERBAIKAN UNTUK TYPEERROR
+            ->relationship('inventoryItems')
             ->live()
-            ->columns([
-                'md' => 8,
-            ])
+            ->afterStateUpdated(function (Get $get, Set $set) {
+                self::updateTotalModal($get, $set);
+            })
+            ->columns(10)
             ->schema([
                 Forms\Components\Select::make('product_id')
                     ->label('Produk')
@@ -155,42 +165,91 @@ class InventoryResource extends Resource implements HasShieldPermissions
                     ->preload()
                     ->relationship('product', 'name')
                     ->getOptionLabelFromRecordUsing(fn (Product $record) => "{$record->name}-({$record->stock})-{$record->sku}")
-                    ->columnSpan([
-                        'md' => 4
-                    ])
+                    ->columnSpan(4)
+                    ->live()
                     ->afterStateHydrated(function (Forms\Set $set, Forms\Get $get, $state) {
                         $product = Product::find($state);
                         $set('stock', $product->stock ?? 0);
+                        $cost_price = $get('cost_price') ?? 0;
+                        $quantity = $get('quantity') ?? 1;
+                        $set('total_cost_per_item', $cost_price * $quantity);
                     })
-                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                    ->afterStateUpdated(function ($state, Forms\Set $set, Get $get) {
                         $product = Product::find($state);
+                        $cost_price = $product->cost_price ?? 0;
                         $set('stock', $product->stock ?? 0);
+                        $set('cost_price', $cost_price);
+                        $set('quantity', 1);
+                        $set('total_cost_per_item', $cost_price * 1);
+                        self::updateTotalModal($get, $set);
                     })
                     ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
+                
                 Forms\Components\TextInput::make('stock')
-                    ->label('Stok Saat Ini')
-                    ->required()
+                    ->label('Stok Ada')
                     ->numeric()
                     ->readOnly()
-                    ->columnSpan([
-                        'md' => 2
-                    ]),
+                    ->columnSpan(1),
+
+                Forms\Components\TextInput::make('cost_price')
+                    ->label('Harga Modal')
+                    ->numeric()
+                    ->required()
+                    ->prefix('Rp')
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (Get $get, Set $set) {
+                        $quantity = $get('quantity') ?? 0;
+                        $cost_price = $get('cost_price') ?? 0;
+                        $set('total_cost_per_item', $quantity * $cost_price);
+                        self::updateTotalModal($get, $set);
+                    })
+                    ->columnSpan(2),
+
                 Forms\Components\TextInput::make('quantity')
                     ->label('Jumlah')
                     ->numeric()
                     ->default(1)
                     ->minValue(1)
-                    ->columnSpan([
-                        'md' => 2
-                    ]),
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (Get $get, Set $set) {
+                        $quantity = $get('quantity') ?? 0;
+                        $cost_price = $get('cost_price') ?? 0;
+                        $set('total_cost_per_item', $quantity * $cost_price);
+                        self::updateTotalModal($get, $set);
+                    })
+                    ->columnSpan(1),
+
+                Forms\Components\TextInput::make('total_cost_per_item')
+                    ->label('Subtotal Modal')
+                    ->numeric()
+                    ->prefix('Rp')
+                    ->readOnly()
+                    ->dehydrated(false)
+                    ->columnSpan(2),
             ]);
+    }
+
+    public static function updateTotalModal(Get $get, Set $set): void
+    {
+        $items = $get('inventoryItems');
+        $total = 0;
+
+        if (is_array($items)) {
+            foreach ($items as $item) {
+                $cost_price = $item['cost_price'] ?? 0;
+                $quantity = $item['quantity'] ?? 0;
+                $total += $cost_price * $quantity;
+            }
+        }
+        
+        $set('total_modal', $total);
     }
 
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListInventories::route('/'),
-            'edit' => Pages\EditInventory::route('/{record}/edit'), // <-- INI TAMBAHAN
+            'edit' => Pages\EditInventory::route('/{record}/edit'),
         ];
     }
 }

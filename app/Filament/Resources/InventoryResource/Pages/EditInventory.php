@@ -11,7 +11,6 @@ class EditInventory extends EditRecord
 {
     protected static string $resource = InventoryResource::class;
 
-
     protected function getFormQuery(): Builder
     {
         return parent::getFormQuery()->with('inventoryItems.product');

@@ -139,6 +139,15 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->afterStateUpdated(fn (Get $get, Set $set) => self::updatePricesAndProfit($get, $set))
                     ->required(),
 
+                // V V V FIELD INI SUDAH DITAMBAHKAN KEMBALI V V V
+                Forms\Components\TextInput::make('cost_price')
+                    ->label('Harga Modal')
+                    ->prefix('Rp')
+                    ->numeric()
+                    ->required()
+                    ->minValue(0),
+                // ^ ^ ^ BATAS FIELD YANG DITAMBAHKAN ^ ^ ^
+
                 Forms\Components\TextInput::make('selling_price')
                     ->label('Harga Jual Otomatis')
                     ->prefix('Rp')
@@ -360,7 +369,9 @@ class ProductResource extends Resource implements HasShieldPermissions
         $barcodeGenerator = new DNS1D();
 
         foreach ($records as $product) {
-            if (empty($product->barcode)) continue;
+            if (empty($product->barcode)) {
+                continue;
+            }
             $barcodes[] = [
                 'name' => $product->name,
                 'price' => $product->selling_price,
