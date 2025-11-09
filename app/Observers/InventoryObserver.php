@@ -3,101 +3,32 @@
 namespace App\Observers;
 
 use App\Models\Inventory;
-use App\Models\InventoryItem;
-use App\Models\CashFlow;
-use App\Models\Product;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
-class InventoryItemObserver
+class InventoryObserver
 {
-    public function created(InventoryItem $inventoryItem): void
+    public function creating(Inventory $inventory): void
     {
-        $this->updateProductStock($inventoryItem);
-        $this->recalculateInventoryCost($inventoryItem->inventory);
-    }
+        $today = now()->format('Ymd');
+        $prefix = 'INV-' . $today . '-';
 
-    public function updated(InventoryItem $inventoryItem): void
-    {
-        $this->updateProductStock($inventoryItem, 'update');
-        $this->recalculateInventoryCost($inventoryItem->inventory);
-    }
-
-    public function deleted(InventoryItem $inventoryItem): void
-    {
-        $this->updateProductStock($inventoryItem, 'delete');
-        $this->recalculateInventoryCost($inventoryItem->inventory);
-    }
-
-    private function updateProductStock(InventoryItem $item, string $action = 'create'): void
-    {
-        $product = $item->product;
-        if (!$product) {
-            return;
-        }
-
-        $inventoryType = $item->inventory->type;
-        $quantity = $item->quantity;
-
-        if ($action === 'create') {
-            if ($inventoryType === 'in') {
-                $product->stock += $quantity;
-            } elseif ($inventoryType === 'out') {
-                $product->stock -= $quantity;
-            }
-        } elseif ($action === 'delete') {
-            if ($inventoryType === 'in') {
-                $product->stock -= $quantity;
-            } elseif ($inventoryType === 'out') {
-                $product->stock += $quantity;
-            }
-        } elseif ($action === 'update') {
-            $originalQuantity = $item->getOriginal('quantity');
-            $quantityChange = $quantity - $originalQuantity;
-            
-            if ($inventoryType === 'in') {
-                $product->stock += $quantityChange;
-            } elseif ($inventoryType === 'out') {
-                $product->stock -= $quantityChange;
-            }
+        $latest = Inventory::where('reference_number', 'LIKE', $prefix . '%')
+                           ->orderBy('reference_number', 'desc')
+                           ->first();
+        
+        $nextCount = 1;
+        if ($latest) {
+            $lastCount = (int) Str::afterLast($latest->reference_number, '-');
+            $nextCount = $lastCount + 1;
         }
         
-        if ($product->stock < 0) {
-            $product->stock = 0;
+        $inventory->reference_number = $prefix . str_pad($nextCount, 2, '0', STR_PAD_LEFT);
+
+        if (is_null($inventory->total)) {
+            $inventory->total = 0;
         }
-        
-        $product->save();
-    }
-
-    private function recalculateInventoryCost(?Inventory $inventory): void
-    {
-        if (!$inventory) {
-            return;
-        }
-        
-        $totalCost = $inventory->inventoryItems()->sum(DB::raw('cost_price * quantity'));
-
-        $inventory->total = $totalCost;
-        $inventory->total_cost = $totalCost;
-        $inventory->saveQuietly();
-
-        if ($inventory->type === 'in' && $inventory->source === 'purchase_stock') {
-            
-            if ($totalCost > 0) {
-                CashFlow::updateOrCreate(
-                    [
-                        'inventory_id' => $inventory->id
-                    ],
-                    [
-                        'date' => $inventory->updated_at ?? now(),
-                        'type' => 'expense',
-                        'source' => 'purchase_stock',
-                        'amount' => $totalCost,
-                        'notes' => 'Otomatis dari stok Inventory: ' . $inventory->reference_number,
-                    ]
-                );
-            } else {
-                CashFlow::where('inventory_id', $inventory->id)->delete();
-            }
+        if (is_null($inventory->total_cost)) {
+            $inventory->total_cost = 0;
         }
     }
 }
