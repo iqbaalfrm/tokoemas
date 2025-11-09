@@ -104,7 +104,7 @@
                 <b>Toko Mas Hartono Wiyono</b><br>
                 Ps. Wates, Jl. Diponegoro No. 16A, Wates, <br> 
                 Kec. Wates, Kabupaten Kulon Progo, Daerah Istimewa Yogyakarta 55651<br>
-                IG: @tokoemasarjuna<br>
+                IG: @tokomashartonowiyono<br>
                 WhatsApp: 0812-3456-7890
             </div>
         </div>
