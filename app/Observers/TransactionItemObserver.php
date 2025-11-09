@@ -7,39 +7,36 @@ use App\Models\TransactionItem;
 
 class TransactionItemObserver
 {
-/**
-     * Handle the TransactionItem "created" event.
-     */
-    public function created(TransactionItem $TransactionItem): void
+    public function created(TransactionItem $transactionItem): void
     {
-        $product = Product::find($TransactionItem->product_id);
-        $product->decrement('stock', $TransactionItem->quantity);
-    }
-
-    /**
-     * Handle the TransactionItem "updated" event.
-     */
-    public function updated(TransactionItem $TransactionItem): void
-    {
-        $product = Product::find($TransactionItem->product_id);
-        $originalQuantity = $TransactionItem->getOriginal('quantity');
-        $newQuantity = $TransactionItem->quantity;
-
-        if ($originalQuantity !=  $newQuantity) {
-            $product->increment('stock', $originalQuantity);
-            $product->decrement('stock', $newQuantity);
+        $product = Product::withTrashed()->find($transactionItem->product_id);
+        
+        if ($product) {
+            $product->decrement('stock', $transactionItem->quantity);
         }
-
     }
 
-    /**
-     * Handle the TransactionItem "deleted" event.
-     */
-    public function deleted(TransactionItem $TransactionItem): void
+    public function updated(TransactionItem $transactionItem): void
     {
-        $product = Product::find($TransactionItem->product_id);
-        $product->increment('stock', $TransactionItem->quantity);
+        $product = Product::withTrashed()->find($transactionItem->product_id);
+        
+        if ($product && $transactionItem->isDirty('quantity')) {
+            $originalQuantity = $transactionItem->getOriginal('quantity');
+            $newQuantity = $transactionItem->quantity;
+            $quantityChange = $newQuantity - $originalQuantity; // Hitung selisihnya
+            
+            // Jika quantityChange positif (beli lebih banyak), kurangi stok
+            // Jika quantityChange negatif (retur), tambah stok
+            $product->decrement('stock', $quantityChange);
+        }
     }
 
- 
+    public function deleted(TransactionItem $transactionItem): void
+    {
+        $product = Product::withTrashed()->find($transactionItem->product_id);
+        
+        if ($product) {
+            $product->increment('stock', $transactionItem->quantity);
+        }
+    }
 }
