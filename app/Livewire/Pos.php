@@ -10,11 +10,12 @@ use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\Member;
-use App\Models\User; // <-- TAMBAHKAN INI
-use App\Notifications\TransaksiBaruDibuat; // <-- TAMBAHKAN INI
+use App\Models\User;
+use App\Notifications\TransaksiBaruDibuat;
 use App\Services\DirectPrintService;
 use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\Notification as LaravelNotification; // <-- TAMBAHKAN INI
+use Illuminate\Database\Eloquent\Builder; // <-- IMPORT INI
+use Illuminate\Support\Facades\Notification as LaravelNotification;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -84,7 +85,13 @@ class Pos extends Component
         return view('livewire.pos', [
             'products' => Product::where('stock', '>', 0)
                 ->where('is_active', 1)
-                ->when($this->selectedCategory, fn($query) => $query->where('category_id', $this->selectedCategory))
+                // V V V INI ADALAH PERBAIKAN QUERY V V V
+                ->when($this->selectedCategory, function (Builder $query) {
+                    $query->whereHas('subCategory', function (Builder $subQuery) {
+                        $subQuery->where('category_id', $this->selectedCategory);
+                    });
+                })
+                // ^ ^ ^ AKHIR DARI PERBAIKAN QUERY ^ ^ ^
                 ->where(function ($query) {
                     $query->where('name', 'LIKE', '%' . $this->search . '%')
                         ->orWhere('sku', 'LIKE', '%' . $this->search . '%');
@@ -93,7 +100,10 @@ class Pos extends Component
         ]);
     }
 
-    public function updatedOrderItems() { $this->syncCart(); }
+    public function updatedOrderItems()
+    {
+        $this->syncCart();
+    }
 
     public function updatedPaymentMethodId($value)
     {
@@ -104,7 +114,9 @@ class Pos extends Component
             if (!$this->is_cash) {
                 $this->cash_received = number_format($this->total_price, 0, ',', '.');
                 $this->change = 0;
-            } else $this->calculateChange();
+            } else {
+                $this->calculateChange();
+            }
         }
     }
 
@@ -131,14 +143,22 @@ class Pos extends Component
 
     public function updatedBarcode($barcode)
     {
-        if (empty($barcode)) return;
+        if (empty($barcode)) {
+            return;
+        }
         $product = Product::where('barcode', $barcode)->where('is_active', true)->first();
-        if ($product) $this->addToOrder($product->id);
-        else Notification::make()->title('Produk tidak ditemukan ' . $barcode)->danger()->send();
+        if ($product) {
+            $this->addToOrder($product->id);
+        } else {
+            Notification::make()->title('Produk tidak ditemukan ' . $barcode)->danger()->send();
+        }
         $this->barcode = '';
     }
 
-    public function handleScanResult($decodedText) { $this->updatedBarcode($decodedText); }
+    public function handleScanResult($decodedText)
+    {
+        $this->updatedBarcode($decodedText);
+    }
 
     public function setCategory($categoryId = null)
     {
@@ -149,7 +169,9 @@ class Pos extends Component
     public function addToOrder($productId)
     {
         $product = Product::find($productId);
-        if (!$product) return;
+        if (!$product) {
+            return;
+        }
 
         if (isset($this->order_items[$productId])) {
             if ($this->order_items[$productId]['quantity'] >= $product->stock) {
@@ -165,7 +187,7 @@ class Pos extends Component
                 'cost_price' => $product->cost_price,
                 'image_url' => $product->image,
                 'quantity' => 1,
-                'berat' => $product->weight_gram, 
+                'berat' => $product->weight_gram,
             ];
         }
         $this->syncCart();
@@ -174,13 +196,16 @@ class Pos extends Component
     public function increaseQuantity($productId)
     {
         $product = Product::find($productId);
-        if (!$product) return;
+        if (!$product) {
+            return;
+        }
 
         if (isset($this->order_items[$productId])) {
-            if ($this->order_items[$productId]['quantity'] + 1 <= $product->stock)
+            if ($this->order_items[$productId]['quantity'] + 1 <= $product->stock) {
                 $this->order_items[$productId]['quantity']++;
-            else
+            } else {
                 Notification::make()->title('Stok barang tidak mencukupi')->danger()->send();
+            }
         }
         $this->syncCart();
     }
@@ -188,9 +213,11 @@ class Pos extends Component
     public function decreaseQuantity($productId)
     {
         if (isset($this->order_items[$productId])) {
-            if ($this->order_items[$productId]['quantity'] > 1)
+            if ($this->order_items[$productId]['quantity'] > 1) {
                 $this->order_items[$productId]['quantity']--;
-            else unset($this->order_items[$productId]);
+            } else {
+                unset($this->order_items[$productId]);
+            }
         }
         $this->syncCart();
     }
@@ -199,7 +226,9 @@ class Pos extends Component
     {
         session()->put('orderItems', $this->order_items);
         $this->calculateTotal();
-        if ($this->is_cash && !empty($this->cash_received)) $this->calculateChange();
+        if ($this->is_cash && !empty($this->cash_received)) {
+            $this->calculateChange();
+        }
     }
 
     public function calculateTotal()
@@ -274,12 +303,10 @@ class Pos extends Component
             'change' => $this->change,
         ]);
 
-        // --- INI KODE NOTIFIKASI YANG DITAMBAHKAN ---
         $superAdmins = User::role('super_admin')->get();
         if ($superAdmins->isNotEmpty()) {
             LaravelNotification::send($superAdmins, new TransaksiBaruDibuat($order));
         }
-        // --- AKHIR KODE NOTIFIKASI ---
 
         foreach ($this->order_items as $item) {
             $profit = ($item['selling_price'] - $item['cost_price']) * $item['quantity'];
@@ -290,7 +317,7 @@ class Pos extends Component
                 'price' => $item['selling_price'],
                 'cost_price' => $item['cost_price'],
                 'total_profit' => $profit,
-                'weight_gram' => $item['berat'], 
+                'weight_gram' => $item['berat'],
             ]);
         }
 
