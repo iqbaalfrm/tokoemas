@@ -423,8 +423,7 @@
                         </h4>
 
                         <div class="grid grid-cols-2 gap-3">
-                            
-                            <a href="http://127.0.0.1:8000/invoice/{{ $orderToPrint }}/pdf"
+                            <a href="{{ url('/invoice/' . $orderToPrint . '/pdf') }}"
                                 target="_blank" class="flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-[0.98]">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

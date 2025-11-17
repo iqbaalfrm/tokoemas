@@ -43,6 +43,7 @@
             border: 1px solid #a00; 
             padding: 4px 6px; 
             text-align: center;
+            vertical-align: middle;
         }
         .table-barang th {
             background-color: #a00; 
@@ -127,7 +128,7 @@
         <tr>
             <th>Foto</th>
             <th>Jenis</th>
-            <th>Model</th>
+            <th>Model & Kode</th>
             <th>Kadar</th>
             <th>Berat</th>
             <th>Harga</th>
@@ -145,8 +146,14 @@
                 </td>
                 
                 <td>{{ strtoupper($item->product->subCategory->category->name ?? '-') }}</td>
-                
-                <td>{{ strtoupper($item->product->name) }}</td>
+
+                <td>
+                    {{ strtoupper($item->product->name) }}
+                    <br>
+                    <span style="font-size: 9px; color: #555; font-style: italic;">
+                        ({{ $item->product->sku ?? '-' }})
+                    </span>
+                </td>
 
                 <td>{{ $item->product->gold_karat ?? '8K' }}</td>
                 

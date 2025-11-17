@@ -23,6 +23,19 @@ class MemberResource extends Resource
     protected static ?string $slug = 'members';
     protected static ?string $modelLabel = 'Member';
 
+    // --- FUNGSI BARU UNTUK MENGAMBIL DATA RELASI ---
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withCount('transactions') // Menghitung 'Berapa Kali Beli'
+            ->withSum('transactionItems', 'weight_gram'); // Menjumlahkan 'Total Berat'
+            // Pastikan relasi 'transactionItems' ada di model Member.php
+            // public function transactionItems() { 
+            //     return $this->hasManyThrough(TransactionItem::class, Transaction::class); 
+            // }
+    }
+    // --- AKHIR FUNGSI BARU ---
+
     public static function form(Forms\Form $form): Forms\Form
     {
         return $form->schema([
@@ -51,9 +64,19 @@ class MemberResource extends Resource
                 TextColumn::make('no_hp')
                     ->label('Nomor HP')
                     ->searchable(),
-                TextColumn::make('alamat')
-                    ->label('Alamat')
-                    ->limit(30),
+                
+                // --- KOLOM BARU ---
+                TextColumn::make('transactions_count')
+                    ->label('Jumlah Beli')
+                    ->sortable(),
+                
+                TextColumn::make('transaction_items_sum_weight_gram')
+                    ->label('Total Berat (g)')
+                    ->numeric(3)
+                    ->suffix(' g')
+                    ->sortable(),
+                // --- AKHIR KOLOM BARU ---
+
                 TextColumn::make('created_at')
                     ->label('Terdaftar')
                     ->dateTime('d M Y')

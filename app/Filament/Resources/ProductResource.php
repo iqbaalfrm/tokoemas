@@ -97,7 +97,11 @@ class ProductResource extends Resource implements HasShieldPermissions
                                 $subCategory = SubCategory::find($state);
                                 $namaAwal = $subCategory?->name ?? '';
                                 $set('name', $namaAwal . ' ');
-                                $set('sku', $subCategory?->code ?? '');
+                                
+                                // Hanya set SKU jika user belum mengetik manual
+                                if (empty($get('sku')) || $get('sku') === (SubCategory::find($get('sub_category_id'))?->code ?? '')) {
+                                    $set('sku', $subCategory?->code ?? '');
+                                }
                             })
                             ->hidden(fn (Get $get) => !$get('category_filter')),
                     ]),
@@ -167,11 +171,13 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->readOnly()
                     ->default(0),
 
+                // --- INI YANG DIUBAH ---
                 Forms\Components\TextInput::make('sku')
                     ->label('SKU (Kode)')
-                    ->helperText('Otomatis terisi dari Sub-Kategori')
-                    ->maxLength(255)
-                    ->readOnly(),
+                    ->helperText('Otomatis terisi dari Sub-Kategori, tapi bisa diisi manual.')
+                    ->maxLength(255),
+                    // ->readOnly() DIHAPUS
+                // --- AKHIR PERUBAHAN ---
 
                 Forms\Components\TextInput::make('barcode')
                     ->label('Kode Barcode')
@@ -354,14 +360,17 @@ class ProductResource extends Resource implements HasShieldPermissions
         return [];
     }
 
+    // --- INI YANG DIUBAH ---
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListProducts::route('/'),
-            'create' => Pages\CreateProduct::route('/create'),
-            'edit' => Pages\EditProduct::route('/{record}/edit'),
+            // Hapus 'create' dan 'edit' agar pakai default
+            // 'create' => Pages\CreateProduct::route('/create'), 
+            // 'edit' => Pages\EditProduct::route('/{record}/edit'), 
         ];
     }
+    // --- AKHIR PERUBAHAN ---
 
     protected static function generateBulkBarcode($records)
     {

@@ -10,7 +10,6 @@ class TransactionItem extends Model
     use HasFactory;
 
     /**
-     * PERBAIKAN 3: Menambahkan 'weight_gram' ke $fillable
      */
     protected $fillable = [
         'transaction_id',
@@ -19,16 +18,14 @@ class TransactionItem extends Model
         'price',
         'cost_price',
         'total_profit',
-        'weight_gram' // <-- INI PERBAIKANNYA
+        'weight_gram' 
     ];
 
-    // Relasi normal (produk yang tidak dihapus saja)
     public function product()
     {
         return $this->belongsTo(Product::class);
     }
 
-    // Relasi alternatif yang menyertakan produk terhapus
     public function productWithTrashed()
     {
         return $this->belongsTo(Product::class, 'product_id')->withTrashed();
