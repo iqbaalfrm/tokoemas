@@ -23,10 +23,10 @@ class ReportResource extends Resource implements HasShieldPermissions
         ];
     }
 
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
+    // public static function getNavigationBadge(): ?string
+    // {
+    //     return static::getModel()::count();
+    // }
 
     protected static ?string $model = Report::class;
 

@@ -14,7 +14,12 @@ class ProductAlert extends BaseWidget
     protected static ?int $sort = 4;
     protected static ?string $heading = 'Status Stok Produk';
 
-  
+    protected function getTableCacheTime(): ?string
+    {
+        return now()->addHours(1);
+    }
+
+
     public function table(Table $table): Table
     {
         return $table

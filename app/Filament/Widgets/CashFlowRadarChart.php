@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use Filament\Forms;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache; // <-- Tambahkan ini
 
 class CashFlowRadarChart extends ChartWidget
 {
@@ -14,51 +15,52 @@ class CashFlowRadarChart extends ChartWidget
 
     protected function getData(): array
     {
-        $data = DB::table('cash_flows')
-            ->select('source', 'type', DB::raw('SUM(amount) as total'))
-            ->groupBy('source', 'type')
-            ->get();
+        // Tentukan kunci cache dan durasi (misal 60 menit)
+        $cacheKey = 'cash_flow_chart_widget';
+        $cacheDuration = now()->addMinutes(60);
 
-        // Ambil label source unik
-        $sources = $data->pluck('source')->unique()->values();
+        // Gunakan Cache::remember untuk mengambil/menyimpan data
+        return Cache::remember($cacheKey, $cacheDuration, function () {
+            
+            // Query yang sudah dioptimasi
+            $data = DB::table('cash_flows')
+                ->select(
+                    'source',
+                    DB::raw('SUM(CASE WHEN type = "income" THEN amount ELSE -amount END) as net_total')
+                )
+                ->groupBy('source')
+                ->get();
 
-        // Gabungkan income dan expense per source (jumlah bersih)
-        $totalPerSource = [];
+            // Format data untuk chart
+            return [
+                'labels' => $data->pluck('source'),
+                'datasets' => [
+                    [
+                        'label' => 'Net Cash Flow per Source',
+                        'data' => $data->pluck('net_total'),
+                        'backgroundColor' => [
+                            'rgb(52, 211, 153)',
+                            'rgb(251, 191, 36)',
+                            'rgb(239, 68, 68)',
+                            'rgb(96, 165, 250)',
+                            'rgb(168, 85, 247)',
+                            'rgb(236, 72, 153)',
+                            'rgb(34, 197, 94)',
+                            'rgb(253, 224, 71)',
+                            'rgb(250, 204, 21)',
+                            'rgb(29, 78, 216)',
+                            'rgb(124, 58, 237)',
+                            'rgb(236, 72, 153)',
+                            'rgb(16, 185, 129)',
+                            'rgb(59, 130, 246)',
+                            'rgb(232, 62, 140)',
 
-        foreach ($sources as $source) {
-            $income = $data->where('source', $source)->where('type', 'income')->sum('total');
-            $expense = $data->where('source', $source)->where('type', 'expense')->sum('total');
-            $totalPerSource[] = $income - $expense;
-        }
-
-        return [
-            'labels' => $sources,
-            'datasets' => [
-                [
-                    'label' => 'Net Cash Flow per Source',
-                    'data' => $totalPerSource,
-                    'backgroundColor' => [
-                        'rgb(52, 211, 153)',
-                        'rgb(251, 191, 36)',
-                        'rgb(239, 68, 68)',
-                        'rgb(96, 165, 250)',
-                        'rgb(168, 85, 247)',
-                        'rgb(236, 72, 153)',
-                        'rgb(34, 197, 94)',
-                        'rgb(253, 224, 71)',
-                        'rgb(250, 204, 21)',
-                        'rgb(29, 78, 216)',
-                        'rgb(124, 58, 237)',
-                        'rgb(236, 72, 153)',
-                        'rgb(16, 185, 129)',
-                        'rgb(59, 130, 246)',
-                        'rgb(232, 62, 140)',
-
+                        ],
+                        'borderColor' => 'rgba(0, 0, 0, 0.1)',
                     ],
-                    'borderColor' => 'rgba(0, 0, 0, 0.1)',
                 ],
-            ],
-        ];
+            ];
+        });
     }
 
     protected function getType(): string

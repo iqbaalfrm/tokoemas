@@ -11,6 +11,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Hash;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+use Illuminate\Database\Eloquent\Builder;
 
 
 class UserResource extends Resource implements HasShieldPermissions
@@ -58,6 +59,12 @@ class UserResource extends Resource implements HasShieldPermissions
 
             ]);
     }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with('roles');
+    }
+
 
     public static function table(Table $table): Table
     {

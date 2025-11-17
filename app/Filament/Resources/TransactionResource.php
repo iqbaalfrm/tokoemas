@@ -58,10 +58,10 @@ class TransactionResource extends Resource implements HasShieldPermissions
 
     protected static ?int $navigationSort = 3;
 
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
+    // public static function getNavigationBadge(): ?string
+    // {
+    //     return static::getModel()::count();
+    // }
 
     public static function getEloquentQuery(): Builder
     {

@@ -41,10 +41,10 @@ class PaymentMethodResource extends Resource implements HasShieldPermissions
 
     protected static ?string $navigationGroup = 'Menejemen keuangan';
 
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
+    // public static function getNavigationBadge(): ?string
+    // {
+    //     return static::getModel()::count();
+    // }
 
 
     public static function form(Form $form): Form

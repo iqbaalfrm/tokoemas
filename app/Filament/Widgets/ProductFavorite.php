@@ -12,6 +12,12 @@ class ProductFavorite extends BaseWidget
 {
     protected static ?int $sort = 3;
     protected static ?string $heading = 'Produk Terlaris';
+
+    protected function getTableCacheTime(): ?string
+    {
+
+        return now()->addHours(6);
+    }
     public function table(Table $table): Table
     {
         $productQuery = Product::query()

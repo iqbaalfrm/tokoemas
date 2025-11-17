@@ -54,10 +54,10 @@ class ProductResource extends Resource implements HasShieldPermissions
     protected static ?int $navigationSort = 2;
     protected static ?string $navigationGroup = 'Menejemen Produk';
 
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
+    // public static function getNavigationBadge(): ?string
+    // {
+    //     return static::getModel()::count();
+    // }
 
     public static function getEloquentQuery(): Builder
     {
