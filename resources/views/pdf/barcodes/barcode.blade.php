@@ -7,14 +7,14 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            font-size: 10px;
+            font-size: 8px;
             margin: 0;
             padding: 0;
         }
         
         .barcode-label {
-            width: 1.5in; 
-            height: 1in; 
+            width: 2in; 
+            height: 1.5in; 
             float: left;
             overflow: hidden;
             margin: 1px;
@@ -22,7 +22,6 @@
 
             display: flex;
             flex-direction: column;
-            /* Flexbox diaktifkan untuk pemusatan */
             justify-content: center;
             align-items: center;
             text-align: center; 
@@ -34,7 +33,6 @@
             max-height: 40px; 
             display: block;
             margin: 0 auto;
-            /* Hapus padding-top dan biarkan margin diatur oleh p atau Flexbox */
             padding-top: 0; 
             margin-bottom: 0; 
         }
@@ -47,23 +45,23 @@
         
         /* Gaya khusus untuk nomor barcode */
         .barcode-number {
-            font-size: 14px !important; 
+            font-size: 11px !important; /* DITINGKATKAN */
             font-weight: bold;
-            margin-top: 1px !important; 
+            margin-top: 2px !important; /* Jarak dari barcode image */
             margin-bottom: 0 !important;
         }
         
         /* Gaya Khusus untuk Harga */
         .price-text {
-            font-size: 14px !important; /* Dibuat besar agar seimbang dengan nama produk */
-            margin-bottom: 5px !important; /* Tambah margin di bawah harga untuk jarak ke barcode */
+            font-size: 14px !important; 
+            margin-bottom: 3px !important; /* DIKURANGI jarak ke barcode image */
         }
 
         /* Gaya Khusus untuk Nama Produk */
         .name-text {
-            font-size: 14px !important;
+            font-size: 12px !important; /* DITINGKATKAN agar lebih jelas */
             font-weight: bold;
-            margin-bottom: 1px !important; /* Jarak dekat ke harga */
+            margin-bottom: 1px !important; 
         }
 
     </style>
