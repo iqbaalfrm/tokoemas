@@ -74,8 +74,10 @@ class ProductResource extends Resource implements HasShieldPermissions
                             ->live()
                             ->afterStateUpdated(fn (Set $set) => $set('sub_category_id', null))
                             ->dehydrated(false)
-                            ->default(function (?Model $record) {
-                                return $record?->subCategory?->category_id;
+                            ->afterStateHydrated(function (Set $set, ?Product $record) {
+                                if ($record && $record->subCategory) {
+                                    $set('category_filter', $record->subCategory->category_id);
+                                }
                             }),
 
                         Forms\Components\Select::make('sub_category_id')
