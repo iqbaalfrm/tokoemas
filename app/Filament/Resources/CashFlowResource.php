@@ -17,7 +17,6 @@ use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\CashFlowResource\Pages;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
-// --- TAMBAHAN USE STATEMENTS ---
 use App\Models\Approval;
 use App\Models\User;
 use App\Notifications\ApprovalDiminta;
@@ -25,7 +24,7 @@ use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Notification as LaravelNotification;
 use Filament\Support\Exceptions\Halt;
-// --- AKHIR TAMBAHAN ---
+use Illuminate\Support\Collection;
 
 
 class CashFlowResource extends Resource implements HasShieldPermissions
@@ -50,10 +49,6 @@ class CashFlowResource extends Resource implements HasShieldPermissions
 
     protected static ?string $navigationGroup = 'Menejemen keuangan';
 
-    // public static function getNavigationBadge(): ?string
-    // {
-    //     return static::getModel()::count();
-    // }
 
     public static function form(Form $form): Form
     {
@@ -70,7 +65,7 @@ class CashFlowResource extends Resource implements HasShieldPermissions
                     ->live(),
                 Forms\Components\Select::make('source')
                     ->options(fn(Get $get) => CashFlowLabelService::getSourceOptionsByType($get('type')))
-                    ->required(), // Tambahkan required jika perlu
+                    ->required(),
                 Forms\Components\TextInput::make('amount')
                     ->prefix('Rp ')
                     ->required()
@@ -162,7 +157,8 @@ class CashFlowResource extends Resource implements HasShieldPermissions
             ], layout: Tables\Enums\FiltersLayout::Modal)
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->visible(fn($record) => 
+                    ->visible(fn(Model $record) => 
+                        auth()->user()->hasRole('super_admin') &&
                         $record->source !== 'sales' &&
                         $record->source !== 'adjustment' &&
                         $record->source !== 'restored_sales' &&
@@ -172,7 +168,51 @@ class CashFlowResource extends Resource implements HasShieldPermissions
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    // Bulk Action Kustom untuk Approval
+                    Tables\Actions\BulkAction::make('request_delete')
+                        ->label('Minta Hapus Massal')
+                        ->action(function (Collection $records) {
+                            $user = auth()->user();
+                            if ($user->hasRole('super_admin')) {
+                                $records->each->delete();
+                                FilamentNotification::make()->title('Alur Kas berhasil dihapus permanen.')->success()->send();
+                                return;
+                            }
+                            
+                            if ($user->hasRole('admin') || $user->hasRole('kasir')) {
+                                $recordIds = $records->pluck('id')->toArray();
+
+                                $approval = Approval::create([
+                                    'user_id' => $user->id,
+                                    'approvable_type' => CashFlow::class,
+                                    'approvable_id' => 0,
+                                    'action_type' => 'bulk_delete',
+                                    'changes' => ['ids' => $recordIds],
+                                    'status' => 'pending',
+                                ]);
+
+                                $superAdmins = User::role('super_admin')->get();
+                                if ($superAdmins->isNotEmpty()) {
+                                    LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
+                                }
+                                
+                                FilamentNotification::make()
+                                    ->title('Menunggu Approval')
+                                    ->body('Permintaan penghapusan ' . count($recordIds) . ' entri Alur Kas telah dikirim ke Superadmin.')
+                                    ->success()
+                                    ->send();
+                                
+                                throw new Halt(); 
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion()
+                        ->requiresConfirmation()
+                        ->visible(fn() => auth()->user()->hasRole('admin') || auth()->user()->hasRole('kasir')),
+
+                    // Delete Bulk Action Bawaan hanya untuk Superadmin
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->visible(fn() => auth()->user()->hasRole('super_admin')),
+
                 ]),
             ]);
     }
@@ -184,16 +224,14 @@ class CashFlowResource extends Resource implements HasShieldPermissions
         ];
     }
 
-    // --- FUNGSI INI DIUBAH ---
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListCashFlows::route('/'),
-            'create' => Pages\CreateCashFlow::route('/create'), // Panggil page create baru
-            'edit' => Pages\EditCashFlow::route('/{record}/edit'), // Panggil page edit baru
+            'create' => Pages\CreateCashFlow::route('/create'),
+            'edit' => Pages\EditCashFlow::route('/{record}/edit'),
         ];
     }
-    // --- AKHIR PERUBAHAN ---
 
     public static function getWidgets(): array
     {

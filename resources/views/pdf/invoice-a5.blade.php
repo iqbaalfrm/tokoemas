@@ -97,18 +97,6 @@
 <body>
 <div class="container">
     <div class="header">
-        <div class="left">
-            <div class="logo">
-                <img src="{{ public_path('images/logo1.jpg') }}" alt="Logo" style="width: 60px; height: auto;">
-            </div>
-            <div class="toko-info">
-                <b>Toko Mas Hartono Wiyono</b><br>
-                Ps. Wates, Jl. Diponegoro No. 16A, Wates, <br> 
-                Kec. Wates, Kabupaten Kulon Progo, Daerah Istimewa Yogyakarta 55651<br>
-                IG: @tokomashartonowiyono<br>
-                WhatsApp: 0812-3456-7890
-            </div>
-        </div>
 
         <div class="right-info">
             <b>Wates, {{ now()->format('d F Y') }}</b><br>

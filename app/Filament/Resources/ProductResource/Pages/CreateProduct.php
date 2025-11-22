@@ -18,14 +18,15 @@ class CreateProduct extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        if (auth()->user()->hasRole('super_admin')) {
+        $user = auth()->user();
+
+        if ($user->hasRole('super_admin')) {
             return $data;
         }
-
-        if (auth()->user()->hasRole('admin')) {
+        if ($user->hasRole('admin') || $user->hasRole('kasir')) {
             
             $approval = Approval::create([
-                'user_id' => auth()->id(),
+                'user_id' => $user->id,
                 'approvable_type' => Product::class,
                 'approvable_id' => null,
                 'action_type' => 'create',

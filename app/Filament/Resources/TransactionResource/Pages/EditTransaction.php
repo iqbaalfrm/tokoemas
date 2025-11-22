@@ -18,7 +18,6 @@ class EditTransaction extends EditRecord
 {
     protected static string $resource = TransactionResource::class;
 
-    // Optimasi query untuk N+1 di repeater
     protected function getFormQuery(): Builder
     {
         return parent::getFormQuery()->with('transactionItems.product');
@@ -29,20 +28,22 @@ class EditTransaction extends EditRecord
         return [
             Actions\DeleteAction::make(),
             Actions\ForceDeleteAction::make(),
-            ActionsOpenData,
+            Actions\Action::make('OpenData'), // Asumsi ActionsOpenData adalah Actions\Action::make('OpenData')
         ];
     }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (auth()->user()->hasRole('super_admin')) {
+        $user = auth()->user();
+
+        if ($user->hasRole('super_admin')) {
             return $data;
         }
 
-        if (auth()->user()->hasRole('admin')) {
+        if ($user->hasRole('admin') || $user->hasRole('kasir')) {
             
             $approval = Approval::create([
-                'user_id' => auth()->id(),
+                'user_id' => $user->id,
                 'approvable_type' => Transaction::class,
                 'approvable_id' => $this->getRecord()->id,
                 'action_type' => 'update',

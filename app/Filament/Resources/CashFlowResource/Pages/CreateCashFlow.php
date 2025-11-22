@@ -11,6 +11,7 @@ use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Notification as LaravelNotification;
 use Filament\Support\Exceptions\Halt;
+use App\Models\CashFlow;
 
 class CreateCashFlow extends CreateRecord
 {
@@ -19,25 +20,23 @@ class CreateCashFlow extends CreateRecord
     protected function handleRecordCreation(array $data): Model
     {
         $user = auth()->user();
-        $source = $data['source'] ?? null;
+        $model = static::getModel();
 
-        // Kondisi bypass approval: Super Admin ATAU (Kasir DAN sumbernya sales)
-        $bypassApproval = $user->hasRole('super_admin') || ($user->hasRole('kasir') && $source === 'sales');
+        if ($user->hasRole('super_admin')) {
+            return $model::create($data);
+        }
 
-        if ($bypassApproval) {
-            // Langsung buat record
-            return static::getModel()::create($data);
-        } else {
-            // User Admin atau Kasir (non-sales) -> Kirim ke Approval
+        if ($user->hasRole('admin') || $user->hasRole('kasir')) {
+            
             $approval = Approval::create([
                 'user_id' => $user->id,
-                'approvable_type' => static::getModel(),
-                'approvable_id' => null, // Tandanya ini request CREATE
-                'changes' => $data, // Simpan semua data form
+                'approvable_type' => $model,
+                'approvable_id' => null,
+                'action_type' => 'create',
+                'changes' => $data, 
                 'status' => 'pending',
             ]);
 
-            // Kirim notifikasi ke Superadmin
             $superAdmins = User::role('super_admin')->get();
             if ($superAdmins->isNotEmpty()) {
                 LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
@@ -49,8 +48,9 @@ class CreateCashFlow extends CreateRecord
                 ->success()
                 ->send();
 
-            // Hentikan proses pembuatan record asli
             throw new Halt();
         }
+
+        return $model::create($data);
     }
 }

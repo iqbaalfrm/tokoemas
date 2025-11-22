@@ -2,19 +2,17 @@
 
 namespace App\Filament\Resources;
 
-use Filament\Forms;
-use Filament\Tables;
 use App\Models\User;
 use App\Models\Approval;
 use App\Models\Product;
+use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Tables;
 use Filament\Tables\Table;
 use App\Models\Transaction;
 use App\Models\PaymentMethod;
-use App\Models\TransactionItem;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\Action;
 use Filament\Support\Exceptions\Halt;
 use App\Notifications\ApprovalDiminta;
 use Filament\Support\Enums\FontWeight;
@@ -58,10 +56,6 @@ class TransactionResource extends Resource implements HasShieldPermissions
 
     protected static ?int $navigationSort = 3;
 
-    // public static function getNavigationBadge(): ?string
-    // {
-    //     return static::getModel()::count();
-    // }
 
     public static function getEloquentQuery(): Builder
     {
@@ -224,7 +218,8 @@ class TransactionResource extends Resource implements HasShieldPermissions
                                 Notification::make()->title('Transaksi dibatalkan (dihapus permanen).')->success()->send();
                                 return;
                             }
-                            if (auth()->user()->hasRole('admin')) {
+                            // FIX: Memasukkan role 'kasir' ke dalam approval logic
+                            if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('kasir')) { 
                                 $approval = Approval::create([
                                     'user_id' => auth()->id(),
                                     'approvable_type' => Transaction::class,
@@ -255,7 +250,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
                 Tables\Actions\RestoreBulkAction::make(),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make(), // <-- TAMBAHKAN INI
+                Tables\Actions\CreateAction::make(),
             ]);
     }
 
@@ -285,7 +280,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
                         $product = Product::withTrashed()->find($state);
                         $set('cost_price', $product->cost_price ?? 0);
-                        $set('price', $product->selling_price ?? 0); // Diubah ke selling_price
+                        $set('price', $product->selling_price ?? 0); 
                         $quantity = $get('quantity') ?? 1;
                         $set('total_profit', (($product->selling_price ?? 0) - ($product->cost_price ?? 0)) * $quantity);
                         self::updateTotalPrice($get, $set);
@@ -301,7 +296,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
                         $id = $get('product_id');
                         $product = Product::withTrashed()->find($id);
                         $quantity = (int) ($state ?? 0);
-                        $price = (int) ($product->selling_price ?? 0); // Diubah ke selling_price
+                        $price = (int) ($product->selling_price ?? 0); 
                         $costPrice = (int) ($product->cost_price ?? 0);
                         $set('total_profit', ($price - $costPrice) * $quantity);
                         self::updateTotalPrice($get, $set);
@@ -365,9 +360,9 @@ class TransactionResource extends Resource implements HasShieldPermissions
     {
         return [
             'index' => Pages\ListTransactions::route('/'),
-            'create' => Pages\CreateTransaction::route('/create'), // <-- TAMBAHKAN INI
+            'create' => Pages\CreateTransaction::route('/create'), 
             'view' => Pages\ViewTransaction::route('/{record}'),
-            'edit' => Pages\EditTransaction::route('/{record}/edit'), // <-- UBAH INI
+            'edit' => Pages\EditTransaction::route('/{record}/edit'),
         ];
     }
 
@@ -379,7 +374,6 @@ class TransactionResource extends Resource implements HasShieldPermissions
         $ids = $selectedProducts->pluck('product_id')->all();
         $products = Product::withTrashed()->whereIn('id', $ids)->get();
         
-        // Diubah ke selling_price
         $prices = $products->pluck('selling_price', 'id'); 
         $total = $selectedProducts->reduce(function ($total, $item) use ($prices) {
             $productId = $item['product_id'];

@@ -28,14 +28,17 @@ class EditProduct extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (auth()->user()->hasRole('super_admin')) {
+        $user = auth()->user(); // Definisikan user
+
+        if ($user->hasRole('super_admin')) {
             return $data;
         }
 
-        if (auth()->user()->hasRole('admin')) {
+        // FIX: Tambahkan role 'kasir' ke dalam pengecekan approval
+        if ($user->hasRole('admin') || $user->hasRole('kasir')) {
             
             $approval = Approval::create([
-                'user_id' => auth()->id(),
+                'user_id' => $user->id, // Gunakan $user->id
                 'approvable_type' => Product::class,
                 'approvable_id' => $this->getRecord()->id,
                 'action_type' => 'update',
@@ -57,6 +60,7 @@ class EditProduct extends EditRecord
             throw new Halt();
         }
         
+        // Fallback untuk role yang tidak terdefinisi
         return $data;
     }
     

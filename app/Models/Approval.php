@@ -11,12 +11,26 @@ class Approval extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',        
+        'approvable_type',  
+        'approvable_id',   
+        'action_type',     
+        'status',           
+        'changes',      
+        'reason',           
+    ];
 
     protected $casts = [
         'changes' => 'array',
         'approved_at' => 'datetime',
     ];
+
+    const STATUS_PENDING = 'pending';
+    const STATUS_APPROVED = 'approved';
+    const STATUS_REJECTED = 'rejected';
+
+  
 
     public function approvable(): MorphTo
     {
@@ -30,6 +44,7 @@ class Approval extends Model
 
     public function approver(): BelongsTo
     {
+        
         return $this->belongsTo(User::class, 'approved_by');
     }
 }

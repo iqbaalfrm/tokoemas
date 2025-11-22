@@ -41,8 +41,6 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             
-            ->databaseNotifications()
-            ->databaseNotificationsPolling('10s')
             
             ->middleware([
                 EncryptCookies::class,
@@ -65,6 +63,10 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->topbar(!request()->is('pos*'))
             ->navigation(!request()->is('pos*'))
+            ->renderHook(
+                'panels::user-menu.before',
+                fn (): string => view('livewire.custom-notification-list')->toHtml()
+            )
             ->sidebarCollapsibleOnDesktop()
             ->font('poppins')
             ->plugins([

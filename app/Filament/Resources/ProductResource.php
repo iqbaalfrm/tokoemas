@@ -54,11 +54,6 @@ class ProductResource extends Resource implements HasShieldPermissions
     protected static ?int $navigationSort = 2;
     protected static ?string $navigationGroup = 'Menejemen Produk';
 
-    // public static function getNavigationBadge(): ?string
-    // {
-    //     return static::getModel()::count();
-    // }
-
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
@@ -98,7 +93,6 @@ class ProductResource extends Resource implements HasShieldPermissions
                                 $namaAwal = $subCategory?->name ?? '';
                                 $set('name', $namaAwal . ' ');
                                 
-                                // Hanya set SKU jika user belum mengetik manual
                                 if (empty($get('sku')) || $get('sku') === (SubCategory::find($get('sub_category_id'))?->code ?? '')) {
                                     $set('sku', $subCategory?->code ?? '');
                                 }
@@ -171,13 +165,10 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->readOnly()
                     ->default(0),
 
-                // --- INI YANG DIUBAH ---
                 Forms\Components\TextInput::make('sku')
                     ->label('SKU (Kode)')
                     ->helperText('Otomatis terisi dari Sub-Kategori, tapi bisa diisi manual.')
                     ->maxLength(255),
-                    // ->readOnly() DIHAPUS
-                // --- AKHIR PERUBAHAN ---
 
                 Forms\Components\TextInput::make('barcode')
                     ->label('Kode Barcode')
@@ -254,7 +245,32 @@ class ProductResource extends Resource implements HasShieldPermissions
             ])
             ->actions([
                 Tables\Actions\Action::make('Reset Stok')
-                    ->action(fn (Product $record) => $record->update(['stock' => 0]))
+                    ->action(function (Product $record) {
+                        $user = auth()->user();
+                        
+                        if ($user->hasRole('super_admin')) {
+                            $record->update(['stock' => 0]);
+                            Notification::make()->title('Stok berhasil di-reset.')->success()->send();
+                            return;
+                        }
+
+                        if ($user->hasRole('admin') || $user->hasRole('kasir')) {
+                            $approval = Approval::create([
+                                'user_id' => $user->id,
+                                'approvable_type' => Product::class,
+                                'approvable_id' => $record->id,
+                                'changes' => ['action' => 'reset_stock'],
+                                'status' => 'pending',
+                            ]);
+
+                            $superAdmins = User::role('super_admin')->get();
+                            if ($superAdmins->isNotEmpty()) {
+                                LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
+                            }
+                            Notification::make()->title('Menunggu Approval')->body('Permintaan reset stok telah dikirim ke Superadmin.')->success()->send();
+                            throw new Halt();
+                        }
+                    })
                     ->button()
                     ->color('info')
                     ->requiresConfirmation(),
@@ -265,7 +281,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                             Notification::make()->title('Produk dihapus (sementara).')->success()->send();
                             return;
                         }
-                        if (auth()->user()->hasRole('admin')) {
+                        if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('kasir')) {
                             $approval = Approval::create([
                                 'user_id' => auth()->id(),
                                 'approvable_type' => Product::class,
@@ -288,7 +304,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                             Notification::make()->title('Produk dihapus permanen.')->success()->send();
                             return;
                         }
-                        if (auth()->user()->hasRole('admin')) {
+                        if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('kasir')) {
                             $approval = Approval::create([
                                 'user_id' => auth()->id(),
                                 'approvable_type' => Product::class,
@@ -319,7 +335,32 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->action(fn ($records) => self::generateBulkBarcode($records))
                     ->color('success'),
                 Tables\Actions\BulkAction::make('Reset Stok')
-                    ->action(fn ($records) => $records->each->update(['stock' => 0]))
+                    ->action(function (Collection $records) {
+                        $user = auth()->user();
+                        if ($user->hasRole('super_admin')) {
+                            $records->each->update(['stock' => 0]);
+                            Notification::make()->title('Stok berhasil di-reset massal.')->success()->send();
+                            return;
+                        }
+
+                        if ($user->hasRole('admin') || $user->hasRole('kasir')) {
+                            $recordIds = $records->pluck('id')->toArray();
+                            $approval = Approval::create([
+                                'user_id' => $user->id,
+                                'approvable_type' => Product::class,
+                                'approvable_id' => 0,
+                                'action_type' => 'bulk_reset_stock',
+                                'changes' => ['ids' => $recordIds],
+                                'status' => 'pending',
+                            ]);
+                            $superAdmins = User::role('super_admin')->get();
+                            if ($superAdmins->isNotEmpty()) {
+                                LaravelNotification::send($superAdmins, new ApprovalDiminta($approval));
+                            }
+                            Notification::make()->title('Menunggu Approval')->body('Permintaan reset stok massal telah dikirim ke Superadmin.')->success()->send();
+                            throw new Halt();
+                        }
+                    })
                     ->button()
                     ->color('info')
                     ->requiresConfirmation(),
@@ -360,17 +401,14 @@ class ProductResource extends Resource implements HasShieldPermissions
         return [];
     }
 
-    // --- INI YANG DIUBAH ---
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListProducts::route('/'),
-            // Hapus 'create' dan 'edit' agar pakai default
-            // 'create' => Pages\CreateProduct::route('/create'), 
-            // 'edit' => Pages\EditProduct::route('/{record}/edit'), 
+            'create' => Pages\CreateProduct::route('/create'),
+            'edit' => Pages\EditProduct::route('/{record}/edit'),
         ];
     }
-    // --- AKHIR PERUBAHAN ---
 
     protected static function generateBulkBarcode($records)
     {
