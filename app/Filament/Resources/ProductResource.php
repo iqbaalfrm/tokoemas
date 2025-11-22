@@ -9,7 +9,6 @@ use App\Models\Product;
 use App\Models\SubCategory;
 use Barryvdh\DomPDF\Facade\Pdf;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
-use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -28,7 +27,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Notification as LaravelNotification;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 
 class ProductResource extends Resource implements HasShieldPermissions
 {
@@ -329,10 +327,10 @@ class ProductResource extends Resource implements HasShieldPermissions
                     Tables\Actions\RestoreBulkAction::make(),
                 ]),
                 Tables\Actions\BulkAction::make('printBarcodes')
-                    ->label('Cetak Barcode')
+                    ->label('Cetak Barcode Produk Terpilih')
                     ->button()
                     ->icon('heroicon-o-printer')
-                    ->action(fn ($records) => self::generateBulkBarcode($records))
+                    ->action(fn (Collection $records) => self::generateBulkBarcode($records))
                     ->color('success'),
                 Tables\Actions\BulkAction::make('Reset Stok')
                     ->action(function (Collection $records) {
@@ -367,11 +365,6 @@ class ProductResource extends Resource implements HasShieldPermissions
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make(),
-                Tables\Actions\Action::make('printBarcodes')
-                    ->label('Cetak Barcode')
-                    ->icon('heroicon-o-printer')
-                    ->action(fn () => self::generateBulkBarcode(Product::all()))
-                    ->color('success'),
             ]);
     }
 
@@ -419,6 +412,11 @@ class ProductResource extends Resource implements HasShieldPermissions
             if (empty($product->barcode)) {
                 continue;
             }
+
+            if ($product->stock <= 0) {
+                continue;
+            }
+            
             $barcodes[] = [
                 'name' => $product->name,
                 'price' => $product->selling_price,
@@ -428,7 +426,11 @@ class ProductResource extends Resource implements HasShieldPermissions
         }
 
         if (empty($barcodes)) {
-            Notification::make()->title('Tidak ada barcode untuk dicetak')->warning()->send();
+            Notification::make()
+                ->title('Tidak ada barcode yang dicetak.')
+                ->body('Pastikan produk yang Anda pilih memiliki stok > 0 dan Kode Barcode terisi.')
+                ->warning()
+                ->send();
             return;
         }
 
