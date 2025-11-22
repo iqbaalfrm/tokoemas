@@ -434,6 +434,7 @@ class ProductResource extends Resource implements HasShieldPermissions
             return;
         }
 
+        #neww
         $pdf = Pdf::loadView('pdf.barcodes.barcode', compact('barcodes'))->setPaper('a4', 'portrait');
         return response()->streamDownload(fn () => print($pdf->output()), 'barcodes.pdf');
     }
