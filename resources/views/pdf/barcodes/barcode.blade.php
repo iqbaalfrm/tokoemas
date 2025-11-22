@@ -15,20 +15,24 @@
         .barcode-label {
             width: 1.5in;
             height: 1in;
-            text-align: center; /* Memastikan semua konten di tengah */
             float: left;
             overflow: hidden;
-            padding: 3px;
             margin: 1px;
-            /* PERUBAHAN DI SINI: border solid 5px */
-            border: 5px solid #000; /* Garis tepi hitam tebal */
+            border: 5px solid #000; 
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center; 
+            padding: 0;
         }
         
         .barcode-label img {
             width: 90%;
             max-height: 25px;
             display: block;
-            margin: 0 auto; /* Memastikan gambar barcode di tengah */
+            margin: 0 auto;
         }
         
         .barcode-label p {
