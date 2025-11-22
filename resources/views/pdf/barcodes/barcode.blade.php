@@ -20,6 +20,8 @@
             overflow: hidden;
             padding: 3px;
             margin: 1px;
+            /* BARIS INI DITAMBAHKAN UNTUK GARIS TEPI */
+            border: 1px solid #ccc;
         }
         
         .barcode-label img {
