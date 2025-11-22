@@ -242,6 +242,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->preload(),
             ])
             ->actions([
+                Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('Reset Stok')
                     ->action(function (Product $record) {
                         $user = auth()->user();
@@ -434,7 +435,6 @@ class ProductResource extends Resource implements HasShieldPermissions
             return;
         }
 
-        #neww
         $pdf = Pdf::loadView('pdf.barcodes.barcode', compact('barcodes'))->setPaper('a4', 'portrait');
         return response()->streamDownload(fn () => print($pdf->output()), 'barcodes.pdf');
     }
