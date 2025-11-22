@@ -7,56 +7,47 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;
-            text-align: center;
-        }
-        table {
-            width: 100%;
-        }
-        td {
-            border: 1px solid #000;
-            padding: 10px;
-            width: 20%; /* 5 kolom, berarti 100% / 5 = 20% */
-            text-align: center;
-        }
-        img {
-            width: 120px;
-            height: 30px;
-        }
-        p {
             font-size: 10px;
-            margin: 5px 0;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .barcode-label {
+            width: 1.5in;
+            height: 1in;
+            text-align: center;
+            float: left;
+            overflow: hidden;
+            padding: 3px;
+            margin: 1px;
+        }
+        
+        .barcode-label img {
+            width: 90%;
+            max-height: 25px;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .barcode-label p {
+            font-size: 8px;
+            margin: 1px 0;
+            line-height: 1;
         }
     </style>
 </head>
 <body>
-    @foreach (collect($barcodes)->groupBy('number') as $number => $items)
-        @php
-            $barcode = $items->first(); // Ambil data 1 barcode untuk info (name, price, barcode image)
-        @endphp
+    
+    @foreach ($barcodes as $barcode)
+        
+        <div class="barcode-label">
+            <p style="font-weight: bold;">{{ $barcode['name'] }}</p>
+            <p>Rp. {{ number_format($barcode['price'], 0, ',', '.') }}</p>
+            <img src="{{ $barcode['barcode'] }}" alt="{{ $barcode['number'] }}"><br>
+            <p style="font-size: 7px;">{{ $barcode['number'] }}</p>
+        </div>
 
-        <h2>Barcode: {{ $barcode['name'] }} - Rp. {{ number_format($barcode['price'], 0, ',', '.') }}</h2>
-
-        <table>
-            @for ($i = 0; $i < 45; $i++)
-                @if ($i % 5 == 0)
-                    <tr>
-                @endif
-
-                <td style="padding: 10px; text-align: center;">
-                    <p>{{ $barcode['name'] }}<br>Rp. {{ number_format($barcode['price'], 0, ',', '.') }}</p>
-                    <img src="{{ $barcode['barcode'] }}" alt="{{ $barcode['number'] }}"><br>
-                    {{ $barcode['number'] }}
-                </td>
-
-                @if (($i + 1) % 5 == 0)
-                    </tr>
-                @endif
-            @endfor
-        </table>
-
-        <div style="page-break-after: always;"></div>
     @endforeach
-</body>
 
+</body>
 </html>
