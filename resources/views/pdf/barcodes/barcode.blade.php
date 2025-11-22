@@ -20,7 +20,6 @@
             margin: 1px;
             border: 5px solid #000; 
 
-            /* Flexbox untuk pemusatan */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -33,13 +32,15 @@
             width: 90%;
             max-height: 25px;
             display: block;
-            margin: 2px auto 0; /* Tambah sedikit margin atas gambar barcode */
+            margin: 0 auto;
+            /* Tambah sedikit padding atas agar tidak terlalu dekat dengan harga */
+            padding-top: 5px; 
         }
         
         .barcode-label p {
             font-size: 8px;
-            margin: 0 0 1px; /* PERUBAHAN: Mengurangi margin atas dan bawah */
-            line-height: 1.1; /* PERUBAHAN: Menyesuaikan tinggi baris */
+            margin: 0 0 1px;
+            line-height: 1.1;
         }
     </style>
 </head>
@@ -51,7 +52,8 @@
             <p style="font-weight: bold; margin-bottom: 0;">{{ $barcode['name'] }}</p>
             <p style="margin-top: 0;">Rp. {{ number_format($barcode['price'], 0, ',', '.') }}</p>
             <img src="{{ $barcode['barcode'] }}" alt="{{ $barcode['number'] }}"><br>
-            <p style="font-size: 7px; margin-top: 2px;">{{ $barcode['number'] }}</p>
+            {{-- PERUBAHAN DI SINI: margin-top ditingkatkan menjadi 6px --}}
+            <p style="font-size: 7px; margin-top: 6px;">{{ $barcode['number'] }}</p> 
         </div>
 
     @endforeach
