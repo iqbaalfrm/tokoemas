@@ -18,7 +18,7 @@
             float: left;
             overflow: hidden;
             margin: 1px;
-            border: 5px solid #000; 
+            border: 3px solid #000; 
 
             display: flex;
             flex-direction: column;
