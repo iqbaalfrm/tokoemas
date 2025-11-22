@@ -20,6 +20,7 @@
             margin: 1px;
             border: 5px solid #000; 
 
+            /* Flexbox untuk pemusatan */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -32,13 +33,13 @@
             width: 90%;
             max-height: 25px;
             display: block;
-            margin: 0 auto;
+            margin: 2px auto 0; /* Tambah sedikit margin atas gambar barcode */
         }
         
         .barcode-label p {
             font-size: 8px;
-            margin: 1px 0;
-            line-height: 1;
+            margin: 0 0 1px; /* PERUBAHAN: Mengurangi margin atas dan bawah */
+            line-height: 1.1; /* PERUBAHAN: Menyesuaikan tinggi baris */
         }
     </style>
 </head>
@@ -47,10 +48,10 @@
     @foreach ($barcodes as $barcode)
         
         <div class="barcode-label">
-            <p style="font-weight: bold;">{{ $barcode['name'] }}</p>
-            <p>Rp. {{ number_format($barcode['price'], 0, ',', '.') }}</p>
+            <p style="font-weight: bold; margin-bottom: 0;">{{ $barcode['name'] }}</p>
+            <p style="margin-top: 0;">Rp. {{ number_format($barcode['price'], 0, ',', '.') }}</p>
             <img src="{{ $barcode['barcode'] }}" alt="{{ $barcode['number'] }}"><br>
-            <p style="font-size: 7px;">{{ $barcode['number'] }}</p>
+            <p style="font-size: 7px; margin-top: 2px;">{{ $barcode['number'] }}</p>
         </div>
 
     @endforeach
