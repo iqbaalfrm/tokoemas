@@ -13,12 +13,12 @@
         }
         
         .barcode-label {
-            width: 1.5in;
-            height: 1in;
+            width: 1.5in; /* Lebar label tetap */
+            height: 1in; /* Tinggi label tetap */
             float: left;
             overflow: hidden;
             margin: 1px;
-            border: 3px solid #000; 
+            border: 1px solid #000; /* Border lebih tipis: 1px */
 
             display: flex;
             flex-direction: column;
@@ -29,12 +29,11 @@
         }
         
         .barcode-label img {
-            width: 90%;
-            max-height: 25px;
+            width: 95%; /* Lebar gambar barcode dibuat lebih besar, hampir memenuhi label */
+            max-height: 40px; /* Tinggi gambar barcode juga diperbesar */
             display: block;
             margin: 0 auto;
-            padding-top: 5px; 
-            /* Hapus margin-bottom agar angka kode menempel rapat */
+            padding-top: 2px; 
             margin-bottom: 0; 
         }
         
@@ -46,9 +45,9 @@
         
         /* Gaya khusus untuk nomor barcode */
         .barcode-number {
-            font-size: 11px !important; /* Dibuat lebih besar */
+            font-size: 14px !important; /* Angka kode dibuat jauh lebih besar */
             font-weight: bold;
-            margin-top: 1px !important; /* Dibuat menempel atau sangat dekat dengan gambar barcode */
+            margin-top: 1px !important; 
             margin-bottom: 0 !important;
         }
     </style>
