@@ -43,7 +43,10 @@ class CustomNotificationList extends Component
 
             $this->notifications = $notificationsCollection
                 ->map(function ($notification) {
-                    $data = $notification->data;
+                    // Parse data notification (bisa JSON string atau array)
+                    $data = is_string($notification->data) 
+                        ? json_decode($notification->data, true) 
+                        : $notification->data;
 
                     return [
                         'id' => $notification->id,

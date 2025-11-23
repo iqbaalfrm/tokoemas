@@ -18,6 +18,8 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 //use Stephenjude\FilamentTwoFactor\FilamentTwoFactorPlugin;
 
 class AdminPanelProvider extends PanelProvider
@@ -65,7 +67,7 @@ class AdminPanelProvider extends PanelProvider
             ->navigation(!request()->is('pos*'))
             ->renderHook(
                 'panels::user-menu.before',
-                fn (): string => view('livewire.custom-notification-list')->toHtml()
+                fn (): HtmlString => new HtmlString(view('filament.notifications')->render())
             )
             ->sidebarCollapsibleOnDesktop()
             ->font('poppins')
