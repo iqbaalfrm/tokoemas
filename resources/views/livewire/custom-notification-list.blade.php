@@ -1,4 +1,4 @@
-<div class="relative overflow-visible" x-data="{ open: false }">
+<div class="relative overflow-visible" x-data="{ open: false }" wire:poll.5s="refreshNotifications">
     <!-- Notification Bell -->
     <button
         @click="open = !open; $wire.toggleDropdown()"

@@ -10,8 +10,11 @@ use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\Member;
+use App\Models\User;
+use App\Notifications\TransaksiBaruDibuat;
 use App\Services\DirectPrintService;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Notification as LaravelNotification;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -282,6 +285,12 @@ class Pos extends Component
                 'total_profit' => $profit,
                 'weight_gram' => $item['weight_gram'] ?? 0, // <-- PERBAIKAN 2 DI SINI
             ]);
+        }
+
+        // Kirim notifikasi ke superadmin
+        $superAdmins = User::role('super_admin')->get();
+        if ($superAdmins->isNotEmpty()) {
+            LaravelNotification::send($superAdmins, new TransaksiBaruDibuat($order));
         }
 
         $this->orderToPrint = $order->id;

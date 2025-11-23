@@ -3,7 +3,7 @@
     $hasUnread = $unreadCount > 0;
 @endphp
 
-<div class="relative">
+<div class="relative" wire:poll.5s="refreshCount">
     <a
         href="{{ route('filament.admin.pages.daftar-approval') }}"
         class="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
