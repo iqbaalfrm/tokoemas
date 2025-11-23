@@ -7,18 +7,18 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            font-size: 10px;
+            font-size: 8px;
             margin: 0;
             padding: 0;
         }
         
         .barcode-label {
-            width: 1.5in; /* Lebar label tetap */
-            height: 1in; /* Tinggi label tetap */
+            width: 2in; 
+            height: 1.5in; 
             float: left;
             overflow: hidden;
             margin: 1px;
-            border: 1px solid #000; /* Border lebih tipis: 1px */
+            border: 1px solid #000; 
 
             display: flex;
             flex-direction: column;
@@ -29,11 +29,11 @@
         }
         
         .barcode-label img {
-            width: 95%; /* Lebar gambar barcode dibuat lebih besar, hampir memenuhi label */
-            max-height: 40px; /* Tinggi gambar barcode juga diperbesar */
+            width: 95%; 
+            max-height: 40px; 
             display: block;
             margin: 0 auto;
-            padding-top: 2px; 
+            padding-top: 0; 
             margin-bottom: 0; 
         }
         
@@ -45,11 +45,25 @@
         
         /* Gaya khusus untuk nomor barcode */
         .barcode-number {
-            font-size: 14px !important; /* Angka kode dibuat jauh lebih besar */
+            font-size: 11px !important; /* DITINGKATKAN */
             font-weight: bold;
-            margin-top: 1px !important; 
+            margin-top: 2px !important; /* Jarak dari barcode image */
             margin-bottom: 0 !important;
         }
+        
+        /* Gaya Khusus untuk Harga */
+        .price-text {
+            font-size: 14px !important; 
+            margin-bottom: 3px !important; /* DIKURANGI jarak ke barcode image */
+        }
+
+        /* Gaya Khusus untuk Nama Produk */
+        .name-text {
+            font-size: 12px !important; /* DITINGKATKAN agar lebih jelas */
+            font-weight: bold;
+            margin-bottom: 1px !important; 
+        }
+
     </style>
 </head>
 <body>
@@ -57,8 +71,8 @@
     @foreach ($barcodes as $barcode)
         
         <div class="barcode-label">
-            <p style="font-weight: bold; margin-bottom: 0;">{{ $barcode['name'] }}</p>
-            <p style="margin-top: 0;">Rp. {{ number_format($barcode['price'], 0, ',', '.') }}</p>
+            <p class="name-text">{{ $barcode['name'] }}</p>
+            <p class="price-text">Rp. {{ number_format($barcode['price'], 0, ',', '.') }}</p>
             <img src="{{ $barcode['barcode'] }}" alt="{{ $barcode['number'] }}">
             
             <p class="barcode-number">{{ $barcode['number'] }}</p>
