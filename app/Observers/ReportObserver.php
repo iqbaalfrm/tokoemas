@@ -2,13 +2,17 @@
 
 namespace App\Observers;
 
+use App\Filament\Resources\ReportResource;
 use App\Models\CashFlow;
 use App\Models\Expense;
 use App\Models\Order;
 use App\Models\Report;
 use App\Models\Setting;
 use App\Models\Transaction;
+use App\Models\User;
+use App\Notifications\ResourceDiubah;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Notification as LaravelNotification;
 use Illuminate\Support\Facades\Storage;
 
 class ReportObserver
@@ -157,6 +161,23 @@ class ReportObserver
 
         if (Storage::exists($pdfPath)) {
             Storage::delete($pdfPath);
+        }
+
+        // Kirim notifikasi ke superadmin jika bukan superadmin yang menghapus
+        $user = auth()->user();
+        if ($user && !$user->hasRole('super_admin')) {
+            $superAdmins = User::role('super_admin')->get();
+            if ($superAdmins->isNotEmpty()) {
+                LaravelNotification::send(
+                    $superAdmins,
+                    new ResourceDiubah(
+                        $report,
+                        'delete',
+                        'Laporan',
+                        ReportResource::getUrl('index')
+                    )
+                );
+            }
         }
     }
    

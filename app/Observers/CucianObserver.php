@@ -1,36 +1,36 @@
 <?php
 
-namespace App\Filament\Resources\CucianResource\Pages;
+namespace App\Observers;
 
 use App\Filament\Resources\CucianResource;
+use App\Models\Cucian;
 use App\Models\User;
 use App\Notifications\ResourceDiubah;
-use Filament\Actions;
-use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Notification as LaravelNotification;
 
-class CreateCucian extends CreateRecord
+class CucianObserver
 {
-    protected static string $resource = CucianResource::class;
-
-    protected function afterCreate(): void
+    /**
+     * Handle the Cucian "deleted" event.
+     */
+    public function deleted(Cucian $cucian): void
     {
+        // Kirim notifikasi ke superadmin jika bukan superadmin yang menghapus
         $user = auth()->user();
-        
-        // Hanya kirim notifikasi jika bukan superadmin
-        if (!$user->hasRole('super_admin')) {
+        if ($user && !$user->hasRole('super_admin')) {
             $superAdmins = User::role('super_admin')->get();
             if ($superAdmins->isNotEmpty()) {
                 LaravelNotification::send(
                     $superAdmins,
                     new ResourceDiubah(
-                        $this->record,
-                        'create',
+                        $cucian,
+                        'delete',
                         'Cucian',
-                        CucianResource::getUrl('edit', ['record' => $this->record])
+                        CucianResource::getUrl('index')
                     )
                 );
             }
         }
     }
 }
+
