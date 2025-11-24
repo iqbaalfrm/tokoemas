@@ -25,6 +25,10 @@ class RiwayatNotifikasiResource extends Resource
     protected static ?string $navigationGroup = 'Laporan Keuangan'; 
     protected static ?int $navigationSort = 99;
 
+        public static function canAccess(): bool
+    {
+        return auth()->user()->hasRole('super_admin');
+    }
 
     public static function canCreate(): bool
     {
