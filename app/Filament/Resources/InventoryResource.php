@@ -35,11 +35,6 @@ class InventoryResource extends Resource implements HasShieldPermissions
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationGroup = 'Menejemen Produk';
 
-    // public static function getNavigationBadge(): ?string
-    // {
-    //     return static::getModel()::count();
-    // }
-
     public static function form(Form $form): Form
     {
         return $form
@@ -74,7 +69,7 @@ class InventoryResource extends Resource implements HasShieldPermissions
                             ->prefix('Rp')
                             ->numeric()
                             ->readOnly()
-                            ->dehydrated(false), // Jangan simpan ini di tabel 'inventories'
+                            ->dehydrated(false),
                     ]),
 
                 Forms\Components\Section::make('Catatan')->schema([
@@ -167,30 +162,52 @@ class InventoryResource extends Resource implements HasShieldPermissions
                     ->getOptionLabelFromRecordUsing(fn (Product $record) => "{$record->name}-({$record->stock})-{$record->sku}")
                     ->columnSpan(4)
                     ->live()
-                    ->afterStateHydrated(function (Forms\Set $set, Forms\Get $get, $state) {
-                        $product = Product::find($state);
-                        $set('stock', $product->stock ?? 0);
-                        $cost_price = $get('cost_price') ?? 0;
-                        $quantity = $get('quantity') ?? 1;
-                        $set('total_cost_per_item', $cost_price * $quantity);
-                    })
                     ->afterStateUpdated(function ($state, Forms\Set $set, Get $get) {
                         $product = Product::find($state);
+                        $stock = $product->stock ?? 0;
                         $cost_price = $product->cost_price ?? 0;
-                        $set('stock', $product->stock ?? 0);
+                        
+                        $set('stock', $stock);
                         $set('cost_price', $cost_price);
-                        $set('quantity', 1);
-                        $set('total_cost_per_item', $cost_price * 1);
+                        
+                        if ($get('../../type') === 'adjustment') {
+                            $set('physical_stock', $stock);
+                            $set('quantity', 0);
+                        } else {
+                            $set('quantity', 1);
+                        }
+    
+                        $set('total_cost_per_item', $cost_price * $get('quantity'));
                         self::updateTotalModal($get, $set);
                     })
                     ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
                 
                 Forms\Components\TextInput::make('stock')
-                    ->label('Stok Ada')
+                    ->label('Stok Sistem')
                     ->numeric()
                     ->readOnly()
                     ->columnSpan(1),
-
+    
+                Forms\Components\TextInput::make('physical_stock')
+                    ->label('Stok Fisik')
+                    ->numeric()
+                    ->default(0)
+                    ->hidden(fn (Get $get) => $get('../../type') !== 'adjustment')
+                    ->dehydrated(false)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                        $systemStock = (int) $get('stock');
+                        $physicalStock = (int) $state;
+                        $diff = $physicalStock - $systemStock;
+                        
+                        $set('quantity', $diff);
+                        
+                        $cost = (int) $get('cost_price');
+                        $set('total_cost_per_item', $cost * $diff);
+                        self::updateTotalModal($get, $set);
+                    })
+                    ->columnSpan(1),
+    
                 Forms\Components\TextInput::make('cost_price')
                     ->label('Harga Modal')
                     ->numeric()
@@ -204,12 +221,12 @@ class InventoryResource extends Resource implements HasShieldPermissions
                         self::updateTotalModal($get, $set);
                     })
                     ->columnSpan(2),
-
+    
                 Forms\Components\TextInput::make('quantity')
-                    ->label('Jumlah')
+                    ->label(fn (Get $get) => $get('../../type') === 'adjustment' ? 'Selisih' : 'Jumlah')
                     ->numeric()
                     ->default(1)
-                    ->minValue(1)
+                    ->readOnly(fn (Get $get) => $get('../../type') === 'adjustment')
                     ->live(onBlur: true)
                     ->afterStateUpdated(function (Get $get, Set $set) {
                         $quantity = $get('quantity') ?? 0;
@@ -218,14 +235,14 @@ class InventoryResource extends Resource implements HasShieldPermissions
                         self::updateTotalModal($get, $set);
                     })
                     ->columnSpan(1),
-
+    
                 Forms\Components\TextInput::make('total_cost_per_item')
-                    ->label('Subtotal Modal')
+                    ->label('Subtotal')
                     ->numeric()
                     ->prefix('Rp')
                     ->readOnly()
                     ->dehydrated(false)
-                    ->columnSpan(2),
+                    ->columnSpan(1),
             ]);
     }
 
@@ -245,10 +262,11 @@ class InventoryResource extends Resource implements HasShieldPermissions
         $set('total_modal', $total);
     }
 
-    public static function getPages(): array
+  public static function getPages(): array
     {
         return [
             'index' => Pages\ListInventories::route('/'),
+            'create' => Pages\CreateInventory::route('/create'), 
             'edit' => Pages\EditInventory::route('/{record}/edit'),
         ];
     }
