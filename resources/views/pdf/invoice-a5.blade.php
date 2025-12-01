@@ -220,12 +220,6 @@
                 </tr>
                 @endforeach
 
-                <!-- Baris Kosong (Tinggi dikurangi agar muat) -->
-                @for($i = 0; $i < (3 - count($transaction->items)); $i++)
-                <tr style="height: 20px;"> 
-                    <td></td><td></td><td></td><td></td><td></td><td></td>
-                </tr>
-                @endfor
             </tbody>
             <tfoot>
                 <tr class="total-row">
