@@ -46,6 +46,12 @@ class TransactionResource extends Resource implements HasShieldPermissions
 
     protected static ?string $model = Transaction::class;
 
+    protected static ?string $slug = 'transaksi';
+
+    protected static ?string $modelLabel = 'Transaksi';
+
+    protected static ?string $pluralModelLabel = 'Riwayat Transaksi';
+
     protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
 
     protected static ?string $navigationLabel = 'Transaksi';

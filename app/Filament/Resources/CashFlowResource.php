@@ -41,6 +41,12 @@ class CashFlowResource extends Resource implements HasShieldPermissions
     
     protected static ?string $model = CashFlow::class;
 
+    protected static ?string $slug = 'alur-kas';
+
+    protected static ?string $modelLabel = 'Alur Kas';
+
+    protected static ?string $pluralModelLabel = 'Alur Kas';
+
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
 
     protected static ?int $navigationSort = 5;

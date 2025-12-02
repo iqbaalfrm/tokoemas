@@ -30,6 +30,12 @@ class ReportResource extends Resource implements HasShieldPermissions
 
     protected static ?string $model = Report::class;
 
+    protected static ?string $slug = 'laporan';
+
+    protected static ?string $modelLabel = 'Laporan';
+
+    protected static ?string $pluralModelLabel = 'Laporan Keuangan';
+
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
 
     protected static ?string $navigationLabel = 'Laporan Keuangan';

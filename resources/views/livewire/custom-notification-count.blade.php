@@ -3,11 +3,12 @@
     $hasUnread = $unreadCount > 0;
 @endphp
 
-<div class="relative" wire:poll.5s="refreshCount">
+<div class="relative">
     <a
         href="{{ route('filament.admin.pages.daftar-approval') }}"
         class="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         title="Notifikasi Approval"
+        wire:ignore
     >
         <svg
             class="w-5 h-5 text-gray-700 dark:text-gray-200"

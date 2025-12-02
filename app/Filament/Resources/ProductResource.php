@@ -47,6 +47,12 @@ class ProductResource extends Resource implements HasShieldPermissions
 
     protected static ?string $model = Product::class;
 
+    protected static ?string $slug = 'produk';
+
+    protected static ?string $modelLabel = 'Produk';
+
+    protected static ?string $pluralModelLabel = 'Produk';
+
     protected static ?string $navigationIcon = 'heroicon-o-square-3-stack-3d';
     protected static ?string $navigationLabel = 'Produk';
     protected static ?int $navigationSort = 2;

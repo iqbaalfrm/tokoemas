@@ -4,7 +4,9 @@ namespace App\Livewire;
 
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Livewire\Attributes\Lazy;
 
+#[Lazy]
 class CustomNotificationList extends Component
 {
     public $isOpen = false;
@@ -13,39 +15,40 @@ class CustomNotificationList extends Component
 
     protected $listeners = [
         'notificationSent' => 'refreshNotifications',
+        'notificationRead' => 'refreshNotifications',
     ];
 
     public function mount()
     {
-        $this->refreshNotifications();
+        // Only load count initially, not the full list
+        $this->loadUnreadCount();
     }
 
-    public function toggleDropdown()
+    public function loadUnreadCount()
     {
-        $this->isOpen = !$this->isOpen;
-        
-        if ($this->isOpen) {
-            $this->refreshNotifications();
+        if (Auth::check()) {
+            $this->unreadCount = Auth::user()->notifications()
+                ->whereNull('read_at')
+                ->limit(50) // Prevent excessive counts
+                ->count();
         }
     }
 
-    public function refreshNotifications()
+    public function loadNotifications()
     {
         if (Auth::check()) {
             $user = Auth::user();
 
-            // Get unread notifications with formatted data
             $notificationsCollection = $user->notifications()
                 ->whereNull('read_at')
                 ->orderBy('created_at', 'desc')
-                ->limit(10) // Limit to recent notifications
+                ->limit(10)
                 ->get();
 
             $this->notifications = $notificationsCollection
                 ->map(function ($notification) {
-                    // Parse data notification (bisa JSON string atau array)
-                    $data = is_string($notification->data) 
-                        ? json_decode($notification->data, true) 
+                    $data = is_string($notification->data)
+                        ? json_decode($notification->data, true)
                         : $notification->data;
 
                     return [
@@ -58,12 +61,26 @@ class CustomNotificationList extends Component
                         'approval_id' => $data['approval_id'] ?? null,
                     ];
                 })
+                ->values() // Reset array keys
                 ->toArray();
 
-            $this->unreadCount = $notificationsCollection->count();
-        } else {
-            $this->notifications = [];
-            $this->unreadCount = 0;
+            $this->unreadCount = count($this->notifications);
+        }
+    }
+
+    public function refreshNotifications()
+    {
+        $this->loadUnreadCount();
+        // Don't reload the full list here to avoid blocking, just update count
+        // The full list is loaded only when dropdown opens
+    }
+
+    public function toggleDropdown()
+    {
+        $this->isOpen = !$this->isOpen;
+
+        if ($this->isOpen) {
+            $this->loadNotifications();
         }
     }
 
@@ -72,12 +89,10 @@ class CustomNotificationList extends Component
         if (Auth::check()) {
             $user = Auth::user();
             $notification = $user->notifications()->where('id', $notificationId)->first();
-            
+
             if ($notification) {
                 $notification->update(['read_at' => now()]);
-                $this->refreshNotifications();
-                
-                // Trigger event for other components
+                $this->loadUnreadCount(); // Update count after marking as read
                 $this->dispatch('notificationRead');
             }
         }
@@ -87,9 +102,7 @@ class CustomNotificationList extends Component
     {
         if (Auth::check()) {
             Auth::user()->unreadNotifications->markAsRead();
-            $this->refreshNotifications();
-            
-            // Trigger event for other components
+            $this->loadUnreadCount(); // Update count after marking all as read
             $this->dispatch('notificationRead');
         }
     }

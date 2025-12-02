@@ -4,7 +4,9 @@ namespace App\Livewire;
 
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Livewire\Attributes\Lazy;
 
+#[Lazy]
 class CustomNotificationCount extends Component
 {
     public $unreadCount = 0;
@@ -16,15 +18,33 @@ class CustomNotificationCount extends Component
 
     public function mount()
     {
-        $this->refreshCount();
+        // Load count asynchronously to prevent blocking page load
+        $this->loadUnreadCount();
+    }
+
+    public function loadUnreadCount()
+    {
+        if (Auth::check()) {
+            // Use cache to avoid hitting DB on every page load
+            $this->unreadCount = cache()->remember(
+                'user_unread_count_' . Auth::id(),
+                300, // Cache for 5 minutes
+                function () {
+                    return Auth::user()->notifications()
+                        ->whereNull('read_at')
+                        ->limit(50) // Prevent excessive counts
+                        ->count();
+                }
+            );
+        }
     }
 
     public function refreshCount()
     {
         if (Auth::check()) {
-            $this->unreadCount = Auth::user()->notifications()
-                ->whereNull('read_at')
-                ->count();
+            // Clear cache and get fresh count
+            cache()->forget('user_unread_count_' . Auth::id());
+            $this->loadUnreadCount();
         }
     }
 

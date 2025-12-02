@@ -27,6 +27,12 @@ class SettingResource extends Resource implements HasShieldPermissions
 
     protected static ?string $model = Setting::class;
 
+    protected static ?string $slug = 'pengaturan';
+
+    protected static ?string $modelLabel = 'Pengaturan';
+
+    protected static ?string $pluralModelLabel = 'Pengaturan';
+
     protected static ?string $navigationIcon = 'heroicon-o-printer';
 
     protected static ?string $navigationLabel = 'Pengaturan';

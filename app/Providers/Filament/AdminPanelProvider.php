@@ -20,30 +20,24 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
-//use Stephenjude\FilamentTwoFactor\FilamentTwoFactorPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-            return $panel
+        return $panel
             ->default()
             ->id('admin')
             ->path('/')
             ->login()
-            ->spa()
-            //->authGuard('web')
-            //->multiFactorAuthentication()
+            ->spa() // SPA mode is already enabled - this is correct
             ->colors([
                 'primary' => Color::Teal,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-            ->pages([
-            ])
+            ->pages([])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
-            
-            
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -60,8 +54,6 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->userMenuItems([
                 'logout' => MenuItem::make()->label('Log out')->color('danger'),
-
-                // ...
             ])
             ->topbar(!request()->is('pos*'))
             ->navigation(!request()->is('pos*'))
@@ -69,28 +61,29 @@ class AdminPanelProvider extends PanelProvider
                 'panels::user-menu.before',
                 fn (): HtmlString => new HtmlString(view('filament.notifications')->render())
             )
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::HEAD_END,
+                fn (): string => '<style>.fi-loading-indicator { display: none !important; }</style>',
+            )
             ->sidebarCollapsibleOnDesktop()
             ->font('poppins')
             ->plugins([
-                \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
-            ])
-            ->plugins([
                 FilamentShieldPlugin::make()
-                        ->gridColumns([
-                            'default' => 1,
-                            'sm' => 2,
-                            'lg' => 3
-                        ])
-                        ->sectionColumnSpan(1)
-                        ->checkboxListColumns([
-                            'default' => 1,
-                            'sm' => 2,
-                            'lg' => 4,
-                        ])
-                        ->resourceCheckboxListColumns([
-                            'default' => 1,
-                            'sm' => 2,
-                        ]),
-            ]);;
+                    ->gridColumns([
+                        'default' => 1,
+                        'sm' => 2,
+                        'lg' => 3
+                    ])
+                    ->sectionColumnSpan(1)
+                    ->checkboxListColumns([
+                        'default' => 1,
+                        'sm' => 2,
+                        'lg' => 4,
+                    ])
+                    ->resourceCheckboxListColumns([
+                        'default' => 1,
+                        'sm' => 2,
+                    ]),
+            ]);
     }
 }

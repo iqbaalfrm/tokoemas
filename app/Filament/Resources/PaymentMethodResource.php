@@ -33,6 +33,12 @@ class PaymentMethodResource extends Resource implements HasShieldPermissions
 
     protected static ?string $model = PaymentMethod::class;
 
+    protected static ?string $slug = 'metode-pembayaran';
+
+    protected static ?string $modelLabel = 'Metode Pembayaran';
+
+    protected static ?string $pluralModelLabel = 'Metode Pembayaran';
+
     protected static ?string $navigationIcon = 'heroicon-o-newspaper';
 
     protected static ?int $navigationSort = 5;

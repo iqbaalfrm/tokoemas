@@ -17,11 +17,15 @@ class MemberResource extends Resource
 {
     protected static ?string $model = Member::class;
 
-    protected static ?string $navigationGroup = 'Manajemen Membership';
+    protected static ?string $slug = 'member';
+
+    protected static ?string $modelLabel = 'Member';
+
+    protected static ?string $pluralModelLabel = 'Member';
+
+    protected static ?string $navigationGroup = 'Menejemen Membership';
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Member';
-    protected static ?string $slug = 'members';
-    protected static ?string $modelLabel = 'Member';
 
     // --- FUNGSI BARU UNTUK MENGAMBIL DATA RELASI ---
     public static function getEloquentQuery(): Builder

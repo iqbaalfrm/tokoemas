@@ -20,6 +20,12 @@ class GoldPriceResource extends Resource
 {
     protected static ?string $model = GoldPrice::class;
 
+    protected static ?string $slug = 'harga-emas';
+
+    protected static ?string $modelLabel = 'Harga Emas';
+
+    protected static ?string $pluralModelLabel = 'Harga Emas Harian';
+
     // INI PENEMPATAN YANG BENAR
     protected static ?string $navigationGroup = 'Menejemen keuangan';
     protected static ?string $navigationLabel = 'Harga Emas Harian';

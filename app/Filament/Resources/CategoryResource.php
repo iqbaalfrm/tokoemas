@@ -34,6 +34,12 @@ class CategoryResource extends Resource implements HasShieldPermissions
     
     protected static ?string $model = Category::class;
 
+    protected static ?string $slug = 'kategori';
+
+    protected static ?string $modelLabel = 'Kategori';
+
+    protected static ?string $pluralModelLabel = 'Kategori';
+
     protected static ?string $navigationIcon = 'heroicon-o-tag';
 
     protected static ?string $navigationLabel = 'Kategori';
