@@ -27,7 +27,7 @@
             /* PENTING: Padding ini mengatur jarak tulisan dari pinggir kertas */
             /* Sesuaikan angka ini jika tulisan menabrak hiasan emas background */
             /* Atas: 35px, Kanan: 25px, Bawah: 20px, Kiri: 25px */
-            padding: 35px 25px 20px 25px; 
+            padding: 50px 30px 20px 30px;
             position: relative;
         }
 
@@ -40,7 +40,8 @@
         .logo-img {
             /* Jika di background sudah ada logo, bagian ini bisa dihapus/dikomentari */
             /* Tapi sebaiknya tetap ada agar tajam saat diprint */
-            height: 50px; 
+            height: 50px;
+            width: auto; 
             margin-bottom: 2px;
         }
 
@@ -95,13 +96,14 @@
             width: 100%;
             border-collapse: collapse;
             border: 1px solid #b8860b;
-            /* Background tabel agak putih agar tulisan tabel tidak tabrakan dengan pola background */
-            background-color: rgba(255, 255, 255, 0.85);
+            /* REVISI: Background tabel jadi transparan */
+            background-color: transparent;
             margin-bottom: 5px;
         }
 
         table.items th {
-            background-color: #fff;
+            /* REVISI: Header tabel transparan (sebelumnya putih) */
+            background-color: transparent;
             color: #b00;
             border: 1px solid #b8860b;
             padding: 5px;
@@ -145,7 +147,8 @@
         .total-row td {
             border: 1px solid #b8860b;
             font-weight: bold;
-            background-color: #fcfcfc;
+            /* REVISI: Baris total transparan (sebelumnya #fcfcfc) */
+            background-color: transparent;
             padding: 6px;
         }
     </style>
@@ -154,19 +157,21 @@
 
     <div class="container">
         
-        <!-- BAGIAN HEADER (Logo, Nama Toko, Data Customer) -->
         <table class="header-table">
             <tr>
                 <td width="60%" valign="top">
                     <img src="{{ public_path('images/logo.png') }}" class="logo-img" alt="Logo">
                     
-                    <div class="shop-name">Harto Wiyono</div>
-                    <div class="shop-address">
-                        <span class="text-red">Toko Mas Harto Wiyono</span><br>
+                    <div class="shop-name"></div>
+                   <div class="shop-address">
+                    <span class="text-red">Toko Mas Harto Wiyono</span><br>
                         Ps. Wates, Jl. Diponegoro No. 16A, Wates,<br>
                         Kec. Wates, Kab. Kulon Progo, DIY 55651<br>
-                        IG: @tokomashartonowiyono | WA: 0812-3456-7890
-                    </div>
+                        Jl. Wates No 18, Klebakan, Kec Sentolo. Pasar Sentolo baru Kios Nomor B.14
+                    
+                    <br>
+                    IG: @tokomashartonowiyono | WA: 0812-3456-7890
+                </div>
                 </td>
                 <td width="40%" class="customer-info">
                     <strong>Wates, {{ now()->format('d F Y') }}</strong><br>
@@ -186,7 +191,6 @@
 
         <div class="section-title">Detail Barang</div>
 
-        <!-- BAGIAN TABEL -->
         <table class="items">
             <thead>
                 <tr>
@@ -203,7 +207,7 @@
                 <tr>
                     <td>
                         @if ($item->product->image)
-                            <img src="{{ public_path('storage/' . $item->product->image) }}" style="width: 40px; height: 40px; object-fit: cover; border: 1px solid #ccc; border-radius: 3px;">
+                            <img src="{{ public_path('storage/' . $item->product->image) }}" style="width: 60px; height: 60px; object-fit: cover; border: 1px solid #ccc; border-radius: 3px;">
                         @else
                             <div style="width: 40px; height: 40px; border: 1px solid #ccc; border-radius: 3px; margin: 0 auto; line-height: 40px; color: #ccc; font-size: 8px;">No Pic</div>
                         @endif
@@ -229,7 +233,6 @@
             </tfoot>
         </table>
 
-        <!-- BAGIAN FOOTER -->
         <table class="footer-info-table">
             <tr>
                 <td class="terms" width="65%">
@@ -254,7 +257,6 @@
                             <td align="center" width="50%">Kasir</td>
                         </tr>
                         <tr>
-                            <!-- Tempat tanda tangan -->
                             <td align="center" height="40"></td> 
                         </tr>
                         <tr>
