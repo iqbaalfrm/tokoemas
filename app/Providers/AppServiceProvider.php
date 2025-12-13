@@ -23,6 +23,7 @@ use App\Observers\MemberObserver;
 use App\Observers\PaymentMethodObserver;
 use App\Observers\CucianObserver;
 use App\Observers\BuybackObserver;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 use App\Observers\InventoryItemObserver;
 use App\Observers\TransactionItemObserver;
@@ -46,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Model::shouldBeStrict(! app()->isProduction());
+
         Inventory::observe(InventoryObserver::class);
         InventoryItem::observe(InventoryItemObserver::class);
         TransactionItem::observe(TransactionItemObserver::class);

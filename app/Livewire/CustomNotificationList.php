@@ -20,7 +20,6 @@ class CustomNotificationList extends Component
 
     public function mount()
     {
-        // Only load count initially, not the full list
         $this->loadUnreadCount();
     }
 
@@ -29,7 +28,7 @@ class CustomNotificationList extends Component
         if (Auth::check()) {
             $this->unreadCount = Auth::user()->notifications()
                 ->whereNull('read_at')
-                ->limit(50) // Prevent excessive counts
+                ->limit(50)
                 ->count();
         }
     }
@@ -61,7 +60,7 @@ class CustomNotificationList extends Component
                         'approval_id' => $data['approval_id'] ?? null,
                     ];
                 })
-                ->values() // Reset array keys
+                ->values()
                 ->toArray();
 
             $this->unreadCount = count($this->notifications);
@@ -71,8 +70,6 @@ class CustomNotificationList extends Component
     public function refreshNotifications()
     {
         $this->loadUnreadCount();
-        // Don't reload the full list here to avoid blocking, just update count
-        // The full list is loaded only when dropdown opens
     }
 
     public function toggleDropdown()

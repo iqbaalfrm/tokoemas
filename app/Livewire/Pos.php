@@ -43,6 +43,7 @@ class Pos extends Component
     public $no_hp;
     public $alamat;
     public $member_id = null;
+    public $notes;
 
     protected $listeners = ['scanResult' => 'handleScanResult'];
 
@@ -165,7 +166,7 @@ class Pos extends Component
                 'cost_price' => $product->cost_price,
                 'image_url' => $product->image,
                 'quantity' => 1,
-                'weight_gram' => $product->weight_gram, // <-- PERBAIKAN 1 DI SINI
+                'weight_gram' => $product->weight_gram,
             ];
         }
         $this->syncCart();
@@ -217,7 +218,7 @@ class Pos extends Component
         session()->forget('orderItems');
         $this->reset([
             'order_items', 'payment_method_id', 'total_price', 'cash_received',
-            'change', 'is_cash', 'selected_payment_method', 'name', 'no_hp', 'alamat', 'member_id'
+            'change', 'is_cash', 'selected_payment_method', 'name', 'no_hp', 'alamat', 'member_id', 'notes'
         ]);
         $this->name = 'Umum';
     }
@@ -272,6 +273,7 @@ class Pos extends Component
             'total' => $this->total_price,
             'cash_received' => $this->is_cash ? $this->getCashReceivedNumeric() : $this->total_price,
             'change' => $this->change,
+            'notes' => $this->notes,
         ]);
 
         foreach ($this->order_items as $item) {
@@ -283,11 +285,10 @@ class Pos extends Component
                 'price' => $item['selling_price'],
                 'cost_price' => $item['cost_price'],
                 'total_profit' => $profit,
-                'weight_gram' => $item['weight_gram'] ?? 0, // <-- PERBAIKAN 2 DI SINI
+                'weight_gram' => $item['weight_gram'] ?? 0,
             ]);
         }
 
-        // Kirim notifikasi ke superadmin
         $superAdmins = User::role('super_admin')->get();
         if ($superAdmins->isNotEmpty()) {
             LaravelNotification::send($superAdmins, new TransaksiBaruDibuat($order));

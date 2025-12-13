@@ -5,7 +5,7 @@ namespace App\Filament\Widgets;
 use Filament\Forms;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache; // <-- Tambahkan ini
+use Illuminate\Support\Facades\Cache;
 
 class CashFlowRadarChart extends ChartWidget
 {
@@ -15,14 +15,29 @@ class CashFlowRadarChart extends ChartWidget
 
     protected function getData(): array
     {
-        // Tentukan kunci cache dan durasi (misal 60 menit)
+        // Check if current user is super admin
+        $isSuperAdmin = auth()->user()?->hasRole('super_admin') ?? false;
+
         $cacheKey = 'cash_flow_chart_widget';
         $cacheDuration = now()->addMinutes(60);
 
-        // Gunakan Cache::remember untuk mengambil/menyimpan data
-        return Cache::remember($cacheKey, $cacheDuration, function () {
-            
-            // Query yang sudah dioptimasi
+        return Cache::remember($cacheKey, $cacheDuration, function () use ($isSuperAdmin) {
+
+            if (!$isSuperAdmin) {
+                // Return empty data for non-super-admin users
+                return [
+                    'labels' => ['Data Terbatas'],
+                    'datasets' => [
+                        [
+                            'label' => 'Net Cash Flow per Source',
+                            'data' => [0],
+                            'backgroundColor' => ['rgba(200, 200, 200, 0.5)'],
+                            'borderColor' => 'rgba(0, 0, 0, 0.1)',
+                        ],
+                    ],
+                ];
+            }
+
             $data = DB::table('cash_flows')
                 ->select(
                     'source',
@@ -31,7 +46,6 @@ class CashFlowRadarChart extends ChartWidget
                 ->groupBy('source')
                 ->get();
 
-            // Format data untuk chart
             return [
                 'labels' => $data->pluck('source'),
                 'datasets' => [

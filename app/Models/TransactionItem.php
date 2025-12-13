@@ -9,8 +9,6 @@ class TransactionItem extends Model
 {
     use HasFactory;
 
-    /**
-     */
     protected $fillable = [
         'transaction_id',
         'product_id',

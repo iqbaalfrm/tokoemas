@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\GoldPurity;
 use App\Models\GoldPrice;
 use App\Models\SubCategory;
 use App\Models\TransactionItem;
@@ -61,9 +62,14 @@ class Product extends Model
         if (!$this->gold_type || !$this->weight_gram) {
             return null;
         }
-        
+
         $pricePerGram = $this->current_price_per_gram;
-        
+
         return $pricePerGram ? (int) round($this->weight_gram * $pricePerGram) : null;
+    }
+
+    public function goldPurity()
+    {
+        return $this->belongsTo(GoldPurity::class);
     }
 }

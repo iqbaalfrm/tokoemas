@@ -253,6 +253,16 @@
                                 rows="2" placeholder="Masukkan alamat customer"></textarea>
                         </div>
 
+                        {{-- Catatan --}}
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                                Catatan
+                            </label>
+                            <textarea wire:model="notes"
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                rows="3" placeholder="Catatan tambahan untuk transaksi ini"></textarea>
+                        </div>
+
                         {{-- Metode Pembayaran --}}
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 dark:text-white mb-2">

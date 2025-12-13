@@ -61,7 +61,7 @@ class ProductResource extends Resource implements HasShieldPermissions
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['subCategory.category'])
+            ->with(['subCategory.category', 'goldPurity'])
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ])->orderBy('created_at', 'desc');
@@ -121,19 +121,19 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->afterStateUpdated(fn (Get $get, Set $set) => self::updatePricesAndProfit($get, $set))
                     ->required(),
 
-                Forms\Components\Select::make('gold_karat')
+                Forms\Components\Select::make('gold_purity_id')
                     ->label('Kadar Emas')
-                    ->options([
-                        '8K' => '8 Karat (33.3%)',
-                        '9K' => '9 Karat (37.5%)',
-                        '10K' => '10 Karat (41.7%)',
-                        '14K' => '14 Karat (58.5%)',
-                        '18K' => '18 Karat (75%)',
-                        '22K' => '22 Karat (91.7%)',
-                        '24K' => '24 Karat (99.9%)',
-                    ])
+                    ->relationship('goldPurity', 'name')
                     ->searchable()
-                    ->required(),
+                    ->preload()
+                    ->createOptionForm([
+                        Forms\Components\TextInput::make('name')
+                            ->required()
+                            ->label('Nama Kadar'),
+                        Forms\Components\Textarea::make('description')
+                            ->label('Keterangan'),
+                    ])
+                    ->helperText('Pilih kadar emas dari daftar atau buat kadar baru'),
 
                 Forms\Components\TextInput::make('weight_gram')
                     ->label('Berat (gram)')
@@ -161,7 +161,9 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->directory('products')
                     ->disk('public')
                     ->helperText('Jika tidak diisi akan diisi foto default')
-                    ->image(),
+                    ->image()
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'image/webp'])
+                    ->maxSize(10240), // 10MB
 
                 Forms\Components\TextInput::make('stock')
                     ->label('Stok Produk')
@@ -201,8 +203,8 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->label('Nama Produk')
                     ->description(fn (Product $record): string => $record->subCategory?->category?->name . ' - ' . $record->subCategory?->name ?? 'Tanpa Kategori')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('gold_karat')
-                    ->label('Kadar')
+                Tables\Columns\TextColumn::make('goldPurity.name')
+                    ->label('Kadar Emas')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\ImageColumn::make('image')
@@ -246,6 +248,11 @@ class ProductResource extends Resource implements HasShieldPermissions
                 Tables\Filters\SelectFilter::make('sub_category_id')
                     ->label('Sub-Kategori')
                     ->relationship('subCategory', 'name')
+                    ->searchable()
+                    ->preload(),
+                Tables\Filters\SelectFilter::make('gold_purity_id')
+                    ->label('Kadar Emas')
+                    ->relationship('goldPurity', 'name')
                     ->searchable()
                     ->preload(),
             ])

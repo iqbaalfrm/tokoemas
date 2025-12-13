@@ -9,16 +9,32 @@ use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Illuminate\Support\Facades\Auth;
-use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 
 
 class Dashboard extends BaseDashboard
 {
-    use HasPageShield;
     protected static ?string $navigationIcon = 'heroicon-o-chart-pie';
-    
+
     use BaseDashboard\Concerns\HasFiltersForm;
-    
+
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        // Super admin and admin can always access
+        if ($user?->hasRole('super_admin') || $user?->hasRole('admin')) {
+            return true;
+        }
+
+        // Kasir cannot access (return false)
+        if ($user?->hasRole('kasir')) {
+            return false;
+        }
+
+        // Default: allow access to other roles if needed
+        return true;
+    }
+
     public function filtersForm(Form $form): Form
     {
         return $form

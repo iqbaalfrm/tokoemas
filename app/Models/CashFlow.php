@@ -15,11 +15,12 @@ class CashFlow extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'date', 
-        'type', 
-        'source', 
-        'amount', 
+        'date',
+        'type',
+        'source',
+        'amount',
         'notes',
-        'inventory_id' 
+        'inventory_id',
+        'description'
     ];
 }

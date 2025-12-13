@@ -11,7 +11,7 @@ class InvoiceController extends Controller
     public function download($id)
     {
 
-        $transaction = Transaction::with(['transactionItems.product.category', 'member'])->findOrFail($id);
+        $transaction = Transaction::with(['transactionItems.product.subCategory.category', 'member', 'paymentMethod'])->findOrFail($id);
 
         $generator = new BarcodeGeneratorPNG();
 

@@ -6,7 +6,7 @@ use App\Models\Transaction;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache; // <-- TAMBAHKAN INI
+use Illuminate\Support\Facades\Cache;
 
 class PaymentMethodPieChart extends ChartWidget
 {
@@ -18,17 +18,14 @@ class PaymentMethodPieChart extends ChartWidget
 
     protected function getData(): array
     {
-        // Ambil filter tanggal
         $startDate = $this->filters['startDate'] ?? null;
         $endDate = $this->filters['endDate'] ?? null;
 
-        // Buat kunci cache yang unik berdasarkan filter
         $cacheKey = 'payment_method_chart_' . $startDate . '_' . $endDate;
-        $cacheDuration = now()->addMinutes(60); // Simpan selama 1 jam
+        $cacheDuration = now()->addMinutes(60);
 
-        // Ambil dari cache, atau jalankan query jika cache tidak ada
         return Cache::remember($cacheKey, $cacheDuration, function () use ($startDate, $endDate) {
-            
+
             $data = Transaction::query()
                 ->when($startDate, fn ($query) => $query->whereDate('created_at', '>=', $startDate))
                 ->when($endDate, fn ($query) => $query->whereDate('created_at', '<=', $endDate))
@@ -46,11 +43,11 @@ class PaymentMethodPieChart extends ChartWidget
                         'label' => 'Jumlah Transaksi',
                         'data' => $values,
                         'backgroundColor' => [
-                            '#f87171', // merah
-                            '#60a5fa', // biru
-                            '#34d399', // hijau
-                            '#facc15', // kuning
-                            '#c084fc', // ungu
+                            '#f87171',
+                            '#60a5fa',
+                            '#34d399',
+                            '#facc15',
+                            '#c084fc',
                         ],
                         'borderColor' => '#ffffff',
                     ],

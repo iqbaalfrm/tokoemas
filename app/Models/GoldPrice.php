@@ -15,8 +15,8 @@ class GoldPrice extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'jenis_emas',      // Pastikan ini ada
-        'harga_per_gram',  // Pastikan ini ada
-        'tanggal',         // Pastikan ini ada
+        'jenis_emas',
+        'harga_per_gram',
+        'tanggal',
     ];
 }

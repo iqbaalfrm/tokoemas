@@ -18,21 +18,19 @@ class CustomNotificationCount extends Component
 
     public function mount()
     {
-        // Load count asynchronously to prevent blocking page load
         $this->loadUnreadCount();
     }
 
     public function loadUnreadCount()
     {
         if (Auth::check()) {
-            // Use cache to avoid hitting DB on every page load
             $this->unreadCount = cache()->remember(
                 'user_unread_count_' . Auth::id(),
-                300, // Cache for 5 minutes
+                300,
                 function () {
                     return Auth::user()->notifications()
                         ->whereNull('read_at')
-                        ->limit(50) // Prevent excessive counts
+                        ->limit(50)
                         ->count();
                 }
             );
@@ -42,7 +40,6 @@ class CustomNotificationCount extends Component
     public function refreshCount()
     {
         if (Auth::check()) {
-            // Clear cache and get fresh count
             cache()->forget('user_unread_count_' . Auth::id());
             $this->loadUnreadCount();
         }

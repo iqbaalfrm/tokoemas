@@ -31,12 +31,18 @@ class AdminPanelProvider extends PanelProvider
             ->path('/')
             ->login()
             ->spa() // SPA mode is already enabled - this is correct
+            ->homeUrl(fn () => auth()->user()?->hasRole('kasir') ? '/pos' : '/')
+            ->favicon(asset('images/logo.png'))
             ->colors([
                 'primary' => Color::Teal,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
-            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-            ->pages([])
+            ->pages([
+                \App\Filament\Pages\Dashboard::class,
+                \App\Filament\Pages\DaftarApproval::class,
+                \App\Filament\Pages\LaporanProduk::class,
+                \App\Filament\Pages\PosPage::class,
+            ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->middleware([
                 EncryptCookies::class,

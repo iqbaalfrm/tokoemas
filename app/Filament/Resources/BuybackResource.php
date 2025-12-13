@@ -20,6 +20,7 @@ class BuybackResource extends Resource
 {
     protected static ?string $model = Buyback::class;
 
+    protected static ?string $slug = 'buyback';
     protected static ?string $navigationIcon = 'heroicon-o-arrow-uturn-left';
     protected static ?string $navigationLabel = 'Buyback';
     protected static ?string $modelLabel = 'Buyback';
@@ -32,6 +33,25 @@ class BuybackResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Informasi Buyback')
                     ->schema([
+                        Forms\Components\TextInput::make('customer_phone')
+                            ->label('Nomer HP')
+                            ->required()
+                            ->tel()
+                            ->columnSpan(2),
+                        Forms\Components\TextInput::make('customer_name')
+                            ->label('Nama Pembeli')
+                            ->required()
+                            ->columnSpan(2),
+                        Forms\Components\TextInput::make('customer_address')
+                            ->label('Alamat')
+                            ->columnSpanFull(),
+                        Forms\Components\FileUpload::make('ktp_image')
+                            ->label('Foto KTP')
+                            ->image()
+                            ->directory('ktp-buyback')
+                            ->maxSize(10240) // 10MB
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg'])
+                            ->columnSpanFull(),
                         Forms\Components\DatePicker::make('tanggal')
                             ->required()
                             ->default(now()),
@@ -59,7 +79,7 @@ class BuybackResource extends Resource
                             ->readOnly()
                             ->prefix('Rp')
                             ->default(0),
-                    ])->columns(4), 
+                    ])->columns(4),
 
                 Forms\Components\Section::make('Barang yang di-Buyback')
                     ->schema([
@@ -74,7 +94,7 @@ class BuybackResource extends Resource
                                     ->numeric()
                                     ->required()
                                     ->suffix('g')
-                                    ->live(onBlur: true), 
+                                    ->live(onBlur: true),
                                 Forms\Components\TextInput::make('item_total_price')
                                     ->label('Harga Beli')
                                     ->numeric()
@@ -87,11 +107,13 @@ class BuybackResource extends Resource
                                     ->directory('buyback-photos')
                                     ->image()
                                     ->imageEditor()
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'image/webp'])
+                                    ->maxSize(10240) // 10MB
                                     ->columnSpanFull(),
                             ])
-                            ->columns(4) 
+                            ->columns(4)
                             ->addActionLabel('Tambahkan item buyback')
-                            ->live() 
+                            ->live()
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 $items = $get('buybackItems');
                                 $totalWeight = 0;
@@ -122,8 +144,13 @@ class BuybackResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with(['user', 'approver']))
             ->columns([
                 Tables\Columns\TextColumn::make('tanggal')->date('d M Y')->sortable(),
+                Tables\Columns\TextColumn::make('customer_name')
+                    ->label('Nama Pembeli')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\BadgeColumn::make('tipe')
                     ->colors([
                         'info' => 'pelanggan',
@@ -136,26 +163,91 @@ class BuybackResource extends Resource
                     ->label('Total Pembayaran')
                     ->money('IDR', true)
                     ->sortable(),
+                Tables\Columns\TextColumn::make('approver.name')
+                    ->label('Disetujui Oleh')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('approved_at')
+                    ->dateTime('d M Y H:i')
+                    ->label('Waktu Approval')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Dibuat Oleh')
+                    ->searchable()
+                    ->sortable()
+                    ->getStateUsing(function ($record) {
+                        // Ensure the relationship is loaded and return the user name
+                        return $record->user ? $record->user->name : 'System';
+                    }),
                 Tables\Columns\TextColumn::make('buyback_items_count')->counts('buybackItems')->label('Jumlah Item'),
-                Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\Filter::make('tanggal')
+                    ->form([
+                        Forms\Components\DatePicker::make('tanggal_from')
+                            ->label('Tanggal Awal')
+                            ->placeholder('Pilih tanggal awal'),
+                        Forms\Components\DatePicker::make('tanggal_to')
+                            ->label('Tanggal Akhir')
+                            ->placeholder('Pilih tanggal akhir'),
+                    ])
+                    ->query(function ($query, array $data): \Illuminate\Database\Eloquent\Builder {
+                        return $query
+                            ->when(
+                                $data['tanggal_from'],
+                                fn ($query, $date): \Illuminate\Database\Eloquent\Builder => $query->whereDate('tanggal', '>=', $date),
+                            )
+                            ->when(
+                                $data['tanggal_to'],
+                                fn ($query, $date): \Illuminate\Database\Eloquent\Builder => $query->whereDate('tanggal', '<=', $date),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['tanggal_from'] ?? null) {
+                            $indicators['tanggal_from'] = 'Tanggal dari ' . \Carbon\Carbon::parse($data['tanggal_from'])->format('d/m/Y');
+                        }
+                        if ($data['tanggal_to'] ?? null) {
+                            $indicators['tanggal_to'] = 'Tanggal hingga ' . \Carbon\Carbon::parse($data['tanggal_to'])->format('d/m/Y');
+                        }
+                        return $indicators;
+                    }),
             ])
             ->actions([
-                Action::make('Lihat Foto')
-                    ->icon('heroicon-o-photo')
-                    ->color('gray')
-                    ->modalContent(fn (Buyback $record): \Illuminate\View\View => view(
-                        'filament.modals.view-buyback-photos', 
-                        ['items' => $record->buybackItems()->whereNotNull('foto')->get()]
-                    ))
-                    ->modalSubmitAction(false)
-                    ->modalCancelAction(false)
-                    ->modalWidth('2xl'),
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('history')
+                        ->icon('heroicon-o-clock')
+                        ->label('Riwayat')
+                        ->modalHeading('Riwayat Proses')
+                        ->modalContent(fn ($record) => view('filament.components.timeline', ['logs' => $record->logs->sortByDesc('created_at')]))
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Tutup'),
+                    Action::make('Lihat Foto')
+                        ->icon('heroicon-o-photo')
+                        ->color('gray')
+                        ->modalContent(fn (Buyback $record): \Illuminate\View\View => view(
+                            'filament.modals.view-buyback-photos',
+                            ['items' => $record->buybackItems()->whereNotNull('foto')->get()]
+                        ))
+                        ->modalSubmitAction(false)
+                        ->modalCancelAction(false)
+                        ->modalWidth('2xl'),
+                    Action::make('view_ktp')
+                        ->label('Lihat KTP')
+                        ->icon('heroicon-o-identification')
+                        ->color('info')
+                        ->visible(fn ($record) => !empty($record->ktp_image))
+                        ->modalHeading('Foto KTP Pelanggan')
+                        ->modalSubmitAction(false)
+                        ->modalCancelAction(fn ($action) => $action->label('Tutup'))
+                        ->modalContent(fn ($record) => new \Illuminate\Support\HtmlString('
+                            <div class="flex justify-center">
+                                <img src="'.asset('storage/'.$record->ktp_image).'" style="max-width: 100%; max-height: 500px; border-radius: 8px;">
+                            </div>
+                        ')),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

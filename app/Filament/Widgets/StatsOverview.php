@@ -17,19 +17,18 @@ class StatsOverview extends BaseWidget
 
     protected function getStats(): array
     {
-        // Ambil filter tanggal dari state
         $filter = $this->filters['range'] ?? 'today';
         $startDateFilter = $this->filters['startDate'] ?? null;
         $endDateFilter = $this->filters['endDate'] ?? null;
 
-        // Buat kunci cache yang unik berdasarkan filter
         $cacheKey = 'stats_overview_' . $filter . '_' . $startDateFilter . '_' . $endDateFilter;
-        $cacheDuration = now()->addMinutes(60); // Simpan 1 jam
+        $cacheDuration = now()->addMinutes(60);
 
-        // Ambil dari cache, atau jalankan query jika cache tidak ada
         return Cache::remember($cacheKey, $cacheDuration, function () use ($filter, $startDateFilter, $endDateFilter) {
 
-            // 1. Logika untuk menentukan rentang tanggal
+            // Check if current user is super admin
+            $isSuperAdmin = auth()->check() && auth()->user()->hasRole('super_admin');
+
             if ($filter === 'custom') {
                 $startDate = !is_null($startDateFilter)
                     ? Carbon::parse($startDateFilter) : now()->startOfDay();
@@ -45,40 +44,53 @@ class StatsOverview extends BaseWidget
                 };
             }
 
-            // 2. Siapkan query dasar (belum dieksekusi)
             $transactionQuery = Transaction::whereBetween('created_at', [$startDate, $endDate]);
+
+            $omset = $transactionQuery->sum('total');
+            $omsetChart = $transactionQuery->pluck('total')->toArray();
+
             $inFlowQuery = CashFlow::where('type', 'income')->whereBetween('created_at', [$startDate, $endDate]);
             $outFlowQuery = CashFlow::where('type', 'expense')->whereBetween('created_at', [$startDate, $endDate]);
 
-            // 3. Eksekusi query optimasi (hanya ambil SUM dan data chart)
-            $omset = $transactionQuery->clone()->sum('total');
-            $omsetChart = $transactionQuery->clone()->pluck('total')->toArray();
-            
             $inFlow = $inFlowQuery->clone()->sum('amount');
             $inFlowChart = $inFlowQuery->clone()->pluck('amount')->toArray();
-            
+
             $outFlow = $outFlowQuery->clone()->sum('amount');
             $outFlowChart = $outFlowQuery->clone()->pluck('amount')->toArray();
-            
-            // 4. Kembalikan data untuk widget
+
+            // Format the values based on user role
+            $omsetValue = $isSuperAdmin ? 'Rp ' . number_format($omset, 0, ",", ".") : 'Rp ******';
+            $inFlowValue = $isSuperAdmin ? 'Rp ' . number_format($inFlow, 0, ",", ".") : 'Rp ******';
+            $outFlowValue = $isSuperAdmin ? 'Rp ' . number_format($outFlow, 0, ",", ".") : 'Rp ******';
+
+            // Format the chart data based on user role (protect chart values too)
+            $omsetChartForDisplay = $isSuperAdmin ? $omsetChart : array_fill(0, count($omsetChart), 0);
+            $inFlowChartForDisplay = $isSuperAdmin ? $inFlowChart : array_fill(0, count($inFlowChart), 0);
+            $outFlowChartForDisplay = $isSuperAdmin ? $outFlowChart : array_fill(0, count($outFlowChart), 0);
+
+            // Format the descriptions based on user role
+            $omsetDesc = $isSuperAdmin ? 'Total Penjualan' : '******';
+            $inFlowDesc = $isSuperAdmin ? 'Cash Inflow' : '******';
+            $outFlowDesc = $isSuperAdmin ? 'Cash Outflow' : '******';
+
             return [
-                Stat::make('Penjualan', 'Rp ' . number_format($omset, 0, ",", "."))
-                    ->description('Omset')
+                Stat::make('Penjualan', $omsetValue)
+                    ->description($omsetDesc)
                     ->descriptionIcon('heroicon-m-arrow-trending-up', IconPosition::Before)
-                    ->chart($omsetChart)
+                    ->chart($omsetChartForDisplay)
                     ->color('success'),
-                Stat::make('Uang Masuk', 'Rp ' . number_format($inFlow, 0, ",", "."))
-                    ->description('Cash Inflow')
+                Stat::make('Uang Masuk', $inFlowValue)
+                    ->description($inFlowDesc)
                     ->descriptionIcon('heroicon-m-arrow-trending-up', IconPosition::Before)
-                    ->chart($inFlowChart)
+                    ->chart($inFlowChartForDisplay)
                     ->color('success'),
-                Stat::make('Uang Keluar', 'Rp ' . number_format($outFlow, 0, ",", "."))
-                    ->description('Cash Outflow')
+                Stat::make('Uang Keluar', $outFlowValue)
+                    ->description($outFlowDesc)
                     ->descriptionIcon('heroicon-m-arrow-trending-down', IconPosition::Before)
-                    ->chart($outFlowChart)
+                    ->chart($outFlowChartForDisplay)
                     ->color('danger'),
             ];
-            
+
         });
     }
 }

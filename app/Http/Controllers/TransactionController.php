@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Transaction;
-// 1. Panggil class generator barcode
 use Picqer\Barcode\BarcodeGeneratorPNG;
 
 class TransactionController extends Controller

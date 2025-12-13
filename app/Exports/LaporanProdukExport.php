@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\Product;
+use App\Models\BuybackItem;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -14,7 +14,7 @@ class LaporanProdukExport implements FromQuery, WithHeadings, WithMapping
 
     public function __construct(Builder $query)
     {
-        // Terima query yang sudah difilter/digroup dari halaman Filament
+        // Terima query yang sudah difilter dari halaman Filament
         $this->query = $query;
     }
 
@@ -34,25 +34,23 @@ class LaporanProdukExport implements FromQuery, WithHeadings, WithMapping
     {
         // Ini adalah judul kolom di file Excel
         return [
-            'Kategori',
+            'Nama Pembeli',
             'Nama Barang',
-            'Kode',
-            'Berat (g)',
+            'Harga',
         ];
     }
 
     /**
-    * @param mixed $product
+    * @param mixed $buybackItem
     * @return array
     */
-    public function map($product): array
+    public function map($buybackItem): array
     {
         // Ini adalah data per baris
         return [
-            $product->category?->name ?? 'Tanpa Kategori',
-            $product->name,
-            $product->sku ?? '-',
-            $product->weight_gram,
+            $buybackItem->buyback->customer_name ?? '-',
+            $buybackItem->nama_produk,
+            $buybackItem->item_total_price,
         ];
     }
 }

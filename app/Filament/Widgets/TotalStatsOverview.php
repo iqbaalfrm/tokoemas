@@ -6,8 +6,8 @@ use Carbon\Carbon;
 use App\Models\CashFlow;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
-use Illuminate\Support\Facades\Cache; // <-- Tambahkan ini
-use Illuminate\Support\Facades\DB; // <-- Tambahkan ini
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class TotalStatsOverview extends BaseWidget
 {
@@ -25,14 +25,14 @@ class TotalStatsOverview extends BaseWidget
 
     protected function getStats(): array
     {
-        // Tentukan kunci cache dan durasi (misal 6 jam)
+        // Check if current user is super admin
+        $isSuperAdmin = auth()->user()?->hasRole('super_admin') ?? false;
+
         $cacheKey = 'total_stats_overview';
         $cacheDuration = now()->addHours(6);
 
-        // Ambil dari cache, atau jalankan query jika cache tidak ada
         $stats = Cache::remember($cacheKey, $cacheDuration, function () {
-            
-            // Optimasi: Hitung inflow dan outflow dalam 1 query
+
             $totals = CashFlow::query()
                 ->select(
                     DB::raw('SUM(CASE WHEN type = "income" THEN amount ELSE 0 END) as total_inflow'),
@@ -49,11 +49,15 @@ class TotalStatsOverview extends BaseWidget
             ];
         });
 
-        // Kembalikan data untuk widget
+        // Format the values based on user role
+        $totalInFlowValue = $isSuperAdmin ? 'Rp ' . number_format($stats['totalInFlow'], 0, ",", ".") : 'Rp ******';
+        $totalOutFlowValue = $isSuperAdmin ? 'Rp ' . number_format($stats['totalOutFlow'], 0, ",", ".") : 'Rp ******';
+        $totalStoreValue = $isSuperAdmin ? 'Rp ' . number_format($stats['totalInFlow'] - $stats['totalOutFlow'], 0, ",", ".") : 'Rp ******';
+
         return [
-            Stat::make('Total Uang Masuk', 'Rp ' . number_format($stats['totalInFlow'], 0, ",", ".")),
-            Stat::make('Total Uang Keluar', 'Rp ' . number_format($stats['totalOutFlow'], 0, ",", ".")),
-            Stat::make('Total Uang Toko', 'Rp ' . number_format($stats['totalInFlow'] - $stats['totalOutFlow'], 0, ",", ".")),
+            Stat::make('Total Uang Masuk', $totalInFlowValue),
+            Stat::make('Total Uang Keluar', $totalOutFlowValue),
+            Stat::make('Total Uang Toko', $totalStoreValue),
         ];
     }
 }

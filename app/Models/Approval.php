@@ -12,13 +12,15 @@ class Approval extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',        
-        'approvable_type',  
-        'approvable_id',   
-        'action_type',     
-        'status',           
-        'changes',      
-        'reason',           
+        'user_id',
+        'approvable_type',
+        'approvable_id',
+        'action_type',
+        'status',
+        'changes',
+        'reason',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [

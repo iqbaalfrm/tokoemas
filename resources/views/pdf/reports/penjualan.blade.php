@@ -75,57 +75,48 @@
         <div id="logo">
             <img src="{{ storage_path('app/public/' . $logo) }}" alt="{{ asset('storage/' . $logo) }}">
         </div>
-        <h1>Laporan Penjualan<br><span>{{ '(' . $fileName . ')' }}</span></h1>
+        <h1>Laporan Transaksi<br><span>{{ '(' . $fileName . ')' }}</span></h1>
     </header>
 
     <main>
     <?php $total_Order_amount = 0?>
-    <?php $total_Profit_amount = 0?>
         @foreach($data as $order)
         <table>
             <thead>
                 <tr>
-                    <th colspan="4" style="background-color:yellow; color:black;">No.Transaksi: {{ $order->transaction_number }}</th>
-                    <th colspan="2" style="background-color:yellow; color:black;">Pembayaran: {{ $order->paymentMethod->name }}</th>
-                </tr>
-                <tr>
-                    <th>Produk</th>
-                    <th>Harga Modal</th>
-                    <th>Harga Jual</th>
-                    <th>Qty</th>
-                    <th>Total Bayar</th>
-                    <th>Total Profit</th>
+                    <th>No. Transaksi</th>
+                    <th>Nama Pembeli</th>
+                    <th>Nama Barang</th>
+                    <th>Pembayaran</th>
+                    <th>Total Harga</th>
                 </tr>
             </thead>
             <tbody>
-                <?php $total_profit_amount = 0 ?>
-                @foreach($order->transactionItems as $item)
-                    <tr>
-                        <td>{{ $item->product->name }}</td>
-                        <td>Rp {{ number_format($item->cost_price, 0, ',', '.') }}</td>
-                        <td>Rp {{ number_format($item->price, 0, ',', '.') }}</td>
-                        <td>{{ $item->quantity }}</td>
-                        <td>Rp {{ number_format($item->price * $item->quantity, 0, ',', '.') }}</td>
-                        <td>Rp {{ number_format($item->total_profit, 0, ',', '.') }}</td>
-                    </tr>
-                    <?php $total_profit_amount += $item->total_profit ?>
-                @endforeach
-                    <tr>
-                        <td colspan="4">Total</td>
-                        <td>Rp {{ number_format( $order->total, 0, ',', '.') }}</td>
-                        <td>Rp {{ number_format( $total_profit_amount, 0, ',', '.') }}</td>
-                    </tr>
+                <tr>
+                    <td>{{ $order->transaction_number }}</td>
+                    <td>{{ $order->member->nama ?? $order->name ?? 'Umum' }}</td>
+                    <td>
+                        @php
+                            $productNames = [];
+                            foreach($order->transactionItems as $item) {
+                                $productNames[] = $item->product?->name ?? 'Produk Tidak Ditemukan';
+                            }
+                            $productList = implode(', ', array_filter($productNames));
+                        @endphp
+                        {{ $productList ?: 'Tidak Ada Produk' }}
+                    </td>
+                    <td>{{ $order->paymentMethod->name ?? 'N/A' }}</td>
+                    <td>Rp {{ number_format($order->total, 0, ',', '.') }}</td>
+                </tr>
             </tbody>
         </table>
         <?php $total_Order_amount += $order->total ?>
-        <?php $total_Profit_amount += $total_profit_amount ?>
         @endforeach
 
         <table>
             <thead>
                 <tr>
                     <th style="background-color:white; color:black; font-size:16px">Total Uang Masuk: Rp {{ number_format( $total_Order_amount, 0, ',', '.') }}</th>
-                    <th style="background-color:white; color:black; font-size:16px">Total Keuntungan: Rp {{ number_format( $total_Profit_amount, 0, ',', '.') }}</th>
                 </tr>
             </thead>
         </table>

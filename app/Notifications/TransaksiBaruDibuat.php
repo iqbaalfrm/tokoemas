@@ -36,7 +36,7 @@ class TransaksiBaruDibuat extends Notification
             ->actions([
                 \Filament\Notifications\Actions\Action::make('view')
                     ->label('Lihat Detail')
-                    ->url(route('filament.admin.resources.transactions.edit', $this->transaction))
+                    ->url(route('filament.admin.resources.transaksi.edit', $this->transaction))
                     ->markAsRead(),
             ]);
 
@@ -46,7 +46,7 @@ class TransaksiBaruDibuat extends Notification
         $databaseMessage['message'] = $message;
         $databaseMessage['title'] = $title;
         $databaseMessage['transaction_id'] = $this->transaction->id;
-        $databaseMessage['url'] = route('filament.admin.resources.transactions.edit', $this->transaction);
+        $databaseMessage['url'] = route('filament.admin.resources.transaksi.edit', $this->transaction);
 
         return $databaseMessage;
     }

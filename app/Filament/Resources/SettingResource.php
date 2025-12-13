@@ -81,7 +81,9 @@ class SettingResource extends Resource implements HasShieldPermissions
                 Forms\Components\FileUpload::make('logo')
                     ->image()
                     ->required()
-                    ->helperText('Pastikan format gambar adalah PNG')
+                    ->helperText('Format gambar yang didukung: JPEG, PNG, JPG, WebP (maks. 10MB)')
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'image/webp'])
+                    ->maxSize(10240) // 10MB
                     ->directory('images')
                     ->label('Logo Toko'),
                 ]),

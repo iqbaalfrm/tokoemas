@@ -189,48 +189,36 @@
             </tr>
         </table>
 
-        <div class="section-title">Detail Barang</div>
+        <div class="section-title">Detail Transaksi</div>
 
         <table class="items">
             <thead>
                 <tr>
-                    <th width="12%">Foto</th>
-                    <th width="15%">Jenis</th>
-                    <th width="33%">Model</th>
-                    <th width="10%">Kadar</th>
-                    <th width="10%">Berat</th>
+                    <th width="15%">No. Transaksi</th>
+                    <th width="15%">Nama Pembeli</th>
+                    <th width="35%">Nama Barang</th>
+                    <th width="15%">Pembayaran</th>
                     <th width="20%">Harga</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach ($transaction->items as $item)
                 <tr>
+                    <td>{{ $transaction->transaction_number }}</td>
+                    <td>{{ $transaction->member->nama ?? $transaction->name ?? 'Umum' }}</td>
                     <td>
-                        @if ($item->product->image)
-                            <img src="{{ public_path('storage/' . $item->product->image) }}" style="width: 60px; height: 60px; object-fit: cover; border: 1px solid #ccc; border-radius: 3px;">
-                        @else
-                            <div style="width: 40px; height: 40px; border: 1px solid #ccc; border-radius: 3px; margin: 0 auto; line-height: 40px; color: #ccc; font-size: 8px;">No Pic</div>
-                        @endif
+                        @php
+                            $productNames = [];
+                            foreach($transaction->transactionItems as $item) {
+                                $productNames[] = $item->product->name;
+                            }
+                            $productList = implode(', ', $productNames);
+                        @endphp
+                        {{ $productList }}
                     </td>
-                    
-                    <td>{{ $item->product->subCategory->category->name ?? $item->product->type ?? '-' }}</td>
-                    <td>
-                        {{ $item->product->name }}<br>
-                        <small style="color: #555;">({{ $item->product->sku ?? '-' }})</small>
-                    </td>
-                    <td>{{ $item->product->gold_karat ?? $item->product->carat ?? '-' }}</td>
-                    <td>{{ number_format($item->weight_gram ?? $item->quantity, 2) }} gr</td>
-                    <td style="text-align: right;">Rp {{ number_format($item->price, 0, ',', '.') }}</td>
-                </tr>
-                @endforeach
-
-            </tbody>
-            <tfoot>
-                <tr class="total-row">
-                    <td colspan="5" style="text-align: right; border: none; padding-right: 10px;">Total:</td>
+                    <td>{{ $transaction->paymentMethod->name ?? 'N/A' }}</td>
                     <td style="text-align: right;">Rp {{ number_format($transaction->total, 0, ',', '.') }}</td>
                 </tr>
-            </tfoot>
+            </tbody>
         </table>
 
         <table class="footer-info-table">

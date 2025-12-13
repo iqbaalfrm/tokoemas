@@ -16,6 +16,8 @@ class BuybackItem extends Model
 
     protected $casts = [
         'foto' => 'string',
+        'item_total_price' => 'decimal:2',
+        'berat' => 'decimal:3',
     ];
 
     public function buyback(): BelongsTo

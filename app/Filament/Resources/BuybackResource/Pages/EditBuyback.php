@@ -20,6 +20,12 @@ class EditBuyback extends EditRecord
         ];
     }
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['processed_by_user_id'] = auth()->id();
+        return $data;
+    }
+
     protected function afterSave(): void
     {
         $user = auth()->user();

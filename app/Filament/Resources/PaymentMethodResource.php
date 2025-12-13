@@ -64,6 +64,8 @@ class PaymentMethodResource extends Resource implements HasShieldPermissions
                 Forms\Components\FileUpload::make('image')
                     ->label('Icon Pembayaran')
                     ->image()
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'image/webp'])
+                    ->maxSize(10240) // 10MB
                     ->required(),
                 Forms\Components\Toggle::make('is_cash')
                     ->label('Metode Pembayaran Cash')

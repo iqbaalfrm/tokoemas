@@ -39,19 +39,28 @@ class ListProducts extends ListRecords
 
     public function getTabs(): array
 {
+    // Optimized tab counts using cached values to avoid multiple count queries
+    $counts = cache()->remember('product_tab_counts', 300, function () { // Cache for 5 minutes
+        return [
+            'stock_banyak' => Product::query()->where('stock', '>=', 10)->count(),
+            'stock_sedikit' => Product::query()->where('stock', '<', 10)->where('stock', '>', 0)->count(),
+            'stock_habis' => Product::query()->where('stock', '<=', 0)->count(),
+        ];
+    });
+
     return [
         'all' => Tab::make(),
         'Stock Banyak' => Tab::make()
         ->modifyQueryUsing(fn (Builder $query) => $query->where('stock', '>', 10))
-        ->badge(Product::query()->where('stock', '>=', 10)->count())
+        ->badge($counts['stock_banyak'])
         ->badgeColor('success'),
         'Stock Sedikit' => Tab::make()
             ->modifyQueryUsing(fn (Builder $query) => $query->where( 'stock', '<', 10 ,)->where('stock', '>', 0))
-            ->badge(Product::query()->where('stock', '<', 10)->where('stock', '>', 0)->count())
+            ->badge($counts['stock_sedikit'])
             ->badgeColor('warning'),
         'Stock Habis' => Tab::make()
             ->modifyQueryUsing(fn (Builder $query) => $query->where('stock', '=', 0))
-            ->badge(Product::query()->where('stock', '<=', 0)->count())
+            ->badge($counts['stock_habis'])
             ->badgeColor('danger'),
     ];
 }

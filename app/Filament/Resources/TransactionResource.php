@@ -22,6 +22,7 @@ use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Infolists\Components\TextEntry;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification as LaravelNotification;
 use App\Filament\Resources\TransactionResource\Pages;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
@@ -155,6 +156,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with('approver'))
             ->columns([
                 Tables\Columns\TextColumn::make('transaction_number')
                     ->label('#No.Transaksi')
@@ -167,6 +169,17 @@ class TransactionResource extends Resource implements HasShieldPermissions
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nama Pemesan')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Dibuat Oleh')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('approver.name')
+                    ->label('Disetujui Oleh')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('approved_at')
+                    ->dateTime('d M Y H:i')
+                    ->label('Waktu Approval')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('total')
                     ->label('Total Harga')
                     ->prefix('Rp ')
@@ -176,7 +189,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -208,6 +221,13 @@ class TransactionResource extends Resource implements HasShieldPermissions
                     ->openUrlInNewTab(),
 
                 Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('history')
+                        ->icon('heroicon-o-clock')
+                        ->label('Riwayat')
+                        ->modalHeading('Riwayat Proses')
+                        ->modalContent(fn ($record) => view('filament.components.timeline', ['logs' => $record->logs->sortByDesc('created_at')]))
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Tutup'),
                     Tables\Actions\EditAction::make()
                         ->visible(fn ($record) => !$record->trashed()),
                     Tables\Actions\ViewAction::make()
@@ -224,8 +244,7 @@ class TransactionResource extends Resource implements HasShieldPermissions
                                 Notification::make()->title('Transaksi dibatalkan (dihapus permanen).')->success()->send();
                                 return;
                             }
-                            // FIX: Memasukkan role 'kasir' ke dalam approval logic
-                            if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('kasir')) { 
+                            if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('kasir')) {
                                 $approval = Approval::create([
                                     'user_id' => auth()->id(),
                                     'approvable_type' => Transaction::class,

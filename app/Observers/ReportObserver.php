@@ -61,6 +61,7 @@ class ReportObserver
             } else {
                 // Ambil data Outflow sesuai start_date dan end_date
                  $data = Transaction::query()
+                 ->with(['paymentMethod', 'transactionItems.product', 'member'])
                  ->when($report->start_date, fn ($q) => $q->whereDate('updated_at', '>=', $report->start_date))
                  ->when($report->end_date, fn ($q) => $q->whereDate('updated_at', '<=', $report->end_date))
                  ->get();
@@ -127,6 +128,7 @@ class ReportObserver
             } else {
                 // Ambil data Outflow sesuai start_date dan end_date
                  $data = Transaction::query()
+                 ->with(['paymentMethod', 'transactionItems.product', 'member'])
                  ->when($report->start_date, fn ($q) => $q->whereDate('updated_at', '>=', $report->start_date))
                  ->when($report->end_date, fn ($q) => $q->whereDate('updated_at', '<=', $report->end_date))
                  ->get();

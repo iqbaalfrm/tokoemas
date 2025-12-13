@@ -75,10 +75,13 @@ class CashFlowResource extends Resource implements HasShieldPermissions
                 Forms\Components\TextInput::make('amount')
                     ->prefix('Rp ')
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->visible(auth()->user()->hasRole('super_admin')),
                 Forms\Components\DatePicker::make('date')
                     ->required(),
-                Forms\Components\Textarea::make('notes')
+                Forms\Components\Textarea::make('description')
+                    ->label('Keterangan')
+                    ->rows(3)
                     ->columnSpanFull(),
             ]);
     }
@@ -104,9 +107,16 @@ class CashFlowResource extends Resource implements HasShieldPermissions
                     ->formatStateUsing(fn($state, $record) => CashFlowLabelService::getSourceLabel($record->type,$state))
                     ->weight('bold'),
                 Tables\Columns\TextColumn::make('amount')
-                    ->prefix('Rp ')
-                    ->numeric()
+                    ->formatStateUsing(fn ($state) => auth()->user()->hasRole('super_admin')
+                        ? 'Rp ' . number_format($state, 0, ',', '.')
+                        : 'Rp ******')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('description')
+                    ->label('Keterangan')
+                    ->limit(50)
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
