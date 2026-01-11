@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Category;
-use App\Models\GoldPrice;
+
 use App\Models\Product;
 use App\Models\SubCategory;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -98,7 +98,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                                 $subCategory = SubCategory::find($state);
                                 $namaAwal = $subCategory?->name ?? '';
                                 $set('name', $namaAwal . ' ');
-                                
+
                                 if (empty($get('sku')) || $get('sku') === (SubCategory::find($get('sub_category_id'))?->code ?? '')) {
                                     $set('sku', $subCategory?->code ?? '');
                                 }
@@ -118,7 +118,6 @@ class ProductResource extends Resource implements HasShieldPermissions
                         'Emas Muda' => 'Emas Muda',
                     ])
                     ->live()
-                    ->afterStateUpdated(fn (Get $get, Set $set) => self::updatePricesAndProfit($get, $set))
                     ->required(),
 
                 Forms\Components\Select::make('gold_purity_id')
@@ -140,7 +139,6 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->numeric()
                     ->step('0.01')
                     ->live(onBlur: true)
-                    ->afterStateUpdated(fn (Get $get, Set $set) => self::updatePricesAndProfit($get, $set))
                     ->required(),
 
                 Forms\Components\TextInput::make('cost_price')
@@ -151,10 +149,12 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->minValue(0),
 
                 Forms\Components\TextInput::make('selling_price')
-                    ->label('Harga Jual Otomatis')
+                    ->label('Harga Jual')
                     ->prefix('Rp')
-                    ->readOnly()
-                    ->numeric(),
+                    ->numeric()
+                    ->required()
+                    ->minValue(0)
+                    ->helperText('Harus diisi manual, tidak otomatis'),
 
                 Forms\Components\FileUpload::make('image')
                     ->label('Gambar Produk')
@@ -199,41 +199,53 @@ class ProductResource extends Resource implements HasShieldPermissions
     {
         return $table
             ->columns([
+                Tables\Columns\ImageColumn::make('image')
+                    ->disk('public')
+                    ->label('')
+                    ->circular()
+                    ->size(40),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nama Produk')
                     ->description(fn (Product $record): string => $record->subCategory?->category?->name . ' - ' . $record->subCategory?->name ?? 'Tanpa Kategori')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('goldPurity.name')
-                    ->label('Kadar Emas')
                     ->searchable()
-                    ->sortable(),
-                Tables\Columns\ImageColumn::make('image')
-                    ->disk('public')
-                    ->label('Gambar')
-                    ->circular(),
+                    ->wrap() // Agar tidak melebar di HP
+                    ->weight('bold')
+                    ->limit(30), // Limit panjang nama di mobile
                 Tables\Columns\TextColumn::make('stock')
                     ->label('Stok')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (string $state): string => $state <= 2 ? 'danger' : 'success'),
+                Tables\Columns\TextColumn::make('selling_price')
+                    ->label('Harga Jual')
+                    ->money('IDR', true)
+                    ->sortable()
+                    ->wrap(),
+
+                // Kolom Sekunder (Hidden di Mobile, Auto-Muncul di Tablet/Desktop)
+                Tables\Columns\TextColumn::make('goldPurity.name')
+                    ->label('Kadar')
+                    ->searchable()
+                    ->sortable()
+                    ->visibleFrom('md'), // Muncul di Medium screen ke atas
                 Tables\Columns\TextColumn::make('cost_price')
-                    ->label('Harga Modal')
-                    ->prefix('Rp ')
+                    ->label('Modal')
                     ->numeric()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('selling_price')
-                    ->label('Harga Saat Ini')
-                    ->money('IDR', true)
-                    ->sortable(),
+                    ->visibleFrom('md'), // Hidden di mobile
                 Tables\Columns\TextColumn::make('barcode')
-                    ->label('No.Barcode')
-                    ->searchable(),
+                    ->label('Barcode')
+                    ->searchable()
+                    ->visibleFrom('md'), // Hidden di mobile
                 Tables\Columns\TextColumn::make('sku')
                     ->label('SKU')
-                    ->searchable(),
+                    ->searchable()
+                    ->visibleFrom('md'), // Hidden di mobile
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Produk Aktif')
-                    ->boolean(),
+                    ->label('Aktif')
+                    ->boolean()
+                    ->visibleFrom('md'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -261,7 +273,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                 Tables\Actions\Action::make('Reset Stok')
                     ->action(function (Product $record) {
                         $user = auth()->user();
-                        
+
                         if ($user->hasRole('super_admin')) {
                             $record->update(['stock' => 0]);
                             Notification::make()->title('Stok berhasil di-reset.')->success()->send();
@@ -378,31 +390,7 @@ class ProductResource extends Resource implements HasShieldPermissions
                     ->button()
                     ->color('info')
                     ->requiresConfirmation(),
-            ])
-            ->headerActions([
-                Tables\Actions\CreateAction::make(),
             ]);
-    }
-
-    public static function updatePricesAndProfit(Get $get, Set $set): void
-    {
-        $goldType = $get('gold_type');
-        $weight = floatval($get('weight_gram'));
-
-        if (empty($goldType) || empty($weight) || $weight <= 0) {
-            $set('selling_price', 0);
-            return;
-        }
-
-        $goldPriceRecord = GoldPrice::where('jenis_emas', $goldType)
-            ->orderBy('tanggal', 'desc')
-            ->first();
-
-        $pricePerGram = $goldPriceRecord?->harga_per_gram ?? 0;
-
-        $sellingPrice = $weight * $pricePerGram;
-
-        $set('selling_price', round($sellingPrice));
     }
 
     public static function getRelations(): array
@@ -432,7 +420,7 @@ class ProductResource extends Resource implements HasShieldPermissions
             if ($product->stock <= 0) {
                 continue;
             }
-            
+
             $barcodes[] = [
                 'name' => $product->name,
                 'price' => $product->selling_price,
